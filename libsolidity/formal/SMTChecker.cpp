@@ -425,6 +425,8 @@ void SMTChecker::endVisit(FunctionCall const& _funCall)
 		visitBlockHash(_funCall);
 	else if (funType.kind() == FunctionType::Kind::Internal)
 		inlineFunctionCall(_funCall);
+	else if (funType.kind() == FunctionType::Kind::External)
+		resetStateVariables();
 	else
 	{
 		m_errorReporter.warning(
