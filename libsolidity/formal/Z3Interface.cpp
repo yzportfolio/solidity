@@ -173,6 +173,8 @@ z3::expr Z3Interface::toZ3Expr(Expression const& _expr)
 		return z3::select(arguments[0], arguments[1]);
 	else if (n == "store")
 		return z3::store(arguments[0], arguments[1], arguments[2]);
+	else if (n == "forall")
+		return z3::forall(arguments[0], arguments[1]);
 	// Cannot reach here.
 	solAssert(false, "");
 	return arguments[0];

@@ -104,7 +104,8 @@ public:
 			{"*", 2},
 			{"/", 2},
 			{"select", 2},
-			{"store", 3}
+			{"store", 3},
+			{"forall", 2}
 		};
 		return operatorsArity.count(name) && operatorsArity.at(name) == arguments.size();
 	}
@@ -143,6 +144,11 @@ public:
 		return Expression("store", std::vector<Expression>{
 			std::move(_array), std::move(_index), std::move(_element)
 		}, _array.sort);
+	}
+
+	static Expression forall(Expression _a, Expression _b)
+	{
+		return Expression("forall", std::move(_a), std::move(_b), Kind::Bool);
 	}
 
 	friend Expression operator!(Expression _a)

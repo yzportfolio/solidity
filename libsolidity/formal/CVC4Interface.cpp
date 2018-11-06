@@ -191,6 +191,8 @@ CVC4::Expr CVC4Interface::toCVC4Expr(Expression const& _expr)
 		return m_context.mkExpr(CVC4::kind::SELECT, arguments[0], arguments[1]);
 	else if (n == "store")
 		return m_context.mkExpr(CVC4::kind::STORE, arguments[0], arguments[1], arguments[2]);
+	else if (n == "forall")
+		return m_context.mkExpr(CVC4::kind::FORALL, m_context.mkExpr(CVC4::kind::BOUND_VAR_LIST, {arguments[0]}), arguments[1]);
 	// Cannot reach here.
 	solAssert(false, "");
 	return arguments[0];

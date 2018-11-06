@@ -72,6 +72,9 @@ void SymbolicMappingVariable::setZeroValue()
 
 void SymbolicMappingVariable::setUnknownValue()
 {
+	auto indexVar = m_interface.newInteger(currentName() + "_index");
+	m_interface.addAssertion(smt::Expression::forall(indexVar, smt::Expression::select(currentValue(), indexVar) >= 0));
+
 	// TODO
 	// \forall d \in D . (select m d) == UNKNOWN (apply type restrictions)
 }
