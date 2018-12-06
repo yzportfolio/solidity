@@ -20,3 +20,6 @@ add_executable(isoltest
 	../libyul/YulOptimizerTest.cpp
 )
 target_link_libraries(isoltest PRIVATE libsolc solidity evmasm ${Boost_PROGRAM_OPTIONS_LIBRARIES} ${Boost_UNIT_TEST_FRAMEWORK_LIBRARIES})
+
+add_executable(yuloptiprof yuloptiprof.cpp)
+target_link_libraries(yuloptiprof PRIVATE solidity)
