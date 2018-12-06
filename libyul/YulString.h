@@ -43,15 +43,6 @@ class YulStringRepository: boost::noncopyable
 public:
 	static constexpr std::uint64_t emptyHash() { return 14695981039346656037u; }
 
-	struct StringData {
-		StringData() {}
-		StringData(std::string const& _str, std::uint64_t _hash): str(_str), hash(_hash) {}
-		std::string str;
-		std::uint64_t hash = emptyHash();
-	};
-
-	using Handle = StringData*;
-
 	YulStringRepository()
 	{
 	}
@@ -60,19 +51,19 @@ public:
 		static YulStringRepository inst;
 		return inst;
 	}
-	Handle stringToHandle(std::string const& _string)
+	std::pair<std::string*, std::uint64_t> stringToHandle(std::string const& _string)
 	{
 		if (_string.empty())
-			return nullptr;
+			return { nullptr, emptyHash() };
 		std::uint64_t h = hash(_string);
 		auto range = m_hashToHandle.equal_range(h);
 		for (auto it = range.first; it != range.second; ++it)
-			if (it->second->str == _string)
-				return it->second;
-		m_strings.emplace_front(_string, h);
+			if (*it->second == _string)
+				return { it->second, h };
+		m_strings.emplace_front(_string);
 		auto handle = &m_strings.front();
 		m_hashToHandle.emplace_hint(range.second, std::make_pair(h, handle));
-		return handle;
+		return { handle, h };
 	}
 	static std::uint64_t hash(std::string const& v)
 	{
@@ -87,8 +78,8 @@ public:
 		return hash;
 	}
 private:
-	std::forward_list<StringData> m_strings;
-	std::unordered_multimap<std::uint64_t, Handle> m_hashToHandle;
+	std::forward_list<std::string> m_strings;
+	std::unordered_multimap<std::uint64_t, std::string*> m_hashToHandle;
 };
 
 /// Wrapper around handles into the YulString repository.
@@ -99,8 +90,9 @@ class YulString
 {
 public:
 	YulString() = default;
-	explicit YulString(std::string const& _s): m_handle(YulStringRepository::instance().stringToHandle(_s)) {}
-	explicit YulString(YulStringRepository::Handle _handle): m_handle(_handle) {}
+	explicit YulString(std::string const& _s) {
+		std::tie(m_handle, m_hash) = YulStringRepository::instance().stringToHandle(_s);
+	}
 	YulString(YulString const&) = default;
 	YulString(YulString&&) = default;
 	YulString& operator=(YulString const&) = default;
@@ -116,9 +108,9 @@ public:
 	{
 		if (!m_handle || !_other.m_handle)
 			return _other.m_handle;
-		if (m_handle->hash < _other.m_handle->hash) return true;
-		if (_other.m_handle->hash < m_handle->hash) return false;
-		return m_handle->str < _other.m_handle->str;
+		if (m_hash < _other.m_hash) return true;
+		if (_other.m_hash < m_hash) return false;
+		return *m_handle < *_other.m_handle;
 	}
 	/// Equality is determined based on the string handle.
 	bool operator==(YulString const& _other) const { return m_handle == _other.m_handle; }
@@ -128,28 +120,29 @@ public:
 	std::string const& str() const
 	{
 		if (m_handle)
-			return m_handle->str;
+			return *m_handle;
 		else
 		{
 			static std::string emptyString;
 			return emptyString;
 		}
 	}
-	YulStringRepository::Handle handle() const
+	std::string* handle() const
 	{
 		return m_handle;
 	}
 	std::uint64_t hash() const
 	{
 		if (m_handle)
-			return m_handle->hash;
+			return m_hash;
 		else
 			return YulStringRepository::emptyHash();
 	}
 
 private:
 	/// Handle of the string. Assumes that the empty string has ID zero.
-	YulStringRepository::Handle m_handle = nullptr;
+	std::string* m_handle = nullptr;
+	std::uint64_t m_hash = YulStringRepository::emptyHash();
 };
 
 }
