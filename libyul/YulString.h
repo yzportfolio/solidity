@@ -21,14 +21,18 @@
 #pragma once
 
 #include <boost/noncopyable.hpp>
+#include <boost/optional.hpp>
 
 #include <unordered_map>
 #include <memory>
 #include <vector>
 #include <string>
+#include <forward_list>
 
 namespace yul
 {
+
+class YulString;
 
 /// Repository for YulStrings.
 /// Owns the string data for all YulStrings, which can be referenced by a Handle.
@@ -37,44 +41,41 @@ namespace yul
 class YulStringRepository: boost::noncopyable
 {
 public:
-	struct Handle
-	{
-		size_t id;
-		std::uint64_t hash;
+	static constexpr std::uint64_t emptyHash() { return 14695981039346656037u; }
+
+	struct StringData {
+		StringData() {}
+		StringData(std::string const& _prefix, std::size_t _suffix, std::uint64_t _hash): prefix(_prefix), suffix(_suffix), hash(_hash) {}
+		std::string prefix;
+		std::size_t suffix = 0;
+		std::uint64_t hash = emptyHash();
 	};
-	YulStringRepository():
-		m_strings{std::make_shared<std::pair<std::string, size_t>>()},
-		m_hashToID{std::make_pair(emptyHash(), 0)}
-	{}
+
+	using Handle = StringData*;
+
+	YulStringRepository()
+	{
+	}
 	static YulStringRepository& instance()
 	{
 		static YulStringRepository inst;
 		return inst;
 	}
-	Handle stringToHandle(std::string const& _string, const size_t _suffix)
+	Handle stringToHandle(std::string const& _string, const std::size_t _suffix)
 	{
 		if (_string.empty() && _suffix == 0)
-			return { 0, emptyHash() };
+			return nullptr;
 		std::uint64_t h = hash(_string, _suffix);
-		auto range = m_hashToID.equal_range(h);
+		auto range = m_hashToHandle.equal_range(h);
 		for (auto it = range.first; it != range.second; ++it)
-			if (m_strings[it->second]->first == _string && m_strings[it->second]->second == _suffix)
-				return Handle{it->second, h};
-		m_strings.emplace_back(std::make_shared<std::pair<std::string, size_t>>(std::make_pair(_string, _suffix)));
-		size_t id = m_strings.size() - 1;
-		m_hashToID.emplace_hint(range.second, std::make_pair(h, id));
-		return Handle{id, h};
+			if ((it->second)->prefix == _string && (it->second)->suffix == _suffix)
+				return it->second;
+		m_strings.emplace_front(_string, _suffix, h);
+		auto handle = &m_strings.front();
+		m_hashToHandle.emplace_hint(range.second, std::make_pair(h, handle));
+		return handle;
 	}
-	std::string const idToString(size_t _id) const
-	{
-		return m_strings[_id]->second > 0 ? m_strings[_id]->first + "_" + std::to_string(m_strings[_id]->second)
-										  : m_strings[_id]->first;
-    }
-	std::string const idToPrefix(size_t _id) const
-	{
-		return m_strings[_id]->first;
-	}
-	static std::uint64_t hash(std::string const& v, size_t s)
+	static std::uint64_t hash(std::string const& v, std::size_t s)
 	{
 		// FNV hash - can be replaced by a better one, e.g. xxhash64
 		std::uint64_t hash = emptyHash();
@@ -83,7 +84,7 @@ public:
 			hash *= 1099511628211u;
 			hash ^= c;
 		}
-		for (int i = 0; i < 8; i++)
+		while (s)
 		{
 			hash *= 1099511628211u;
 			hash ^= s & 0xFF;
@@ -92,10 +93,9 @@ public:
 
 		return hash;
 	}
-	static constexpr std::uint64_t emptyHash() { return 14695981039346656037u; }
 private:
-	std::vector<std::shared_ptr<std::pair<std::string, size_t>>> m_strings;
-	std::unordered_multimap<std::uint64_t, size_t> m_hashToID;
+	std::forward_list<StringData> m_strings;
+	std::unordered_multimap<std::uint64_t, Handle> m_hashToHandle;
 };
 
 /// Wrapper around handles into the YulString repository.
@@ -106,7 +106,8 @@ class YulString
 {
 public:
 	YulString() = default;
-	explicit YulString(std::string const& _s, const size_t suffix = 0): m_handle(YulStringRepository::instance().stringToHandle(_s, suffix)) {}
+	explicit YulString(std::string const& _s, const std::size_t suffix = 0): m_handle(YulStringRepository::instance().stringToHandle(_s, suffix)) {}
+	explicit YulString(YulStringRepository::Handle _handle): m_handle(_handle) {}
 	YulString(YulString const&) = default;
 	YulString(YulString&&) = default;
 	YulString& operator=(YulString const&) = default;
@@ -120,29 +121,70 @@ public:
 	/// falls back to string comparison.
 	bool operator<(YulString const& _other) const
 	{
-		if (m_handle.hash < _other.m_handle.hash) return true;
-		if (_other.m_handle.hash < m_handle.hash) return false;
-		if (m_handle.id == _other.m_handle.id) return false;
-		return str() < _other.str();
+		if (!m_handle || !_other.m_handle)
+			return _other.m_handle;
+		if (m_handle->hash < _other.m_handle->hash) return true;
+		if (_other.m_handle->hash < m_handle->hash) return false;
+		if (m_handle->suffix < _other.m_handle->suffix) return true;
+		if (_other.m_handle->suffix < m_handle->suffix) return false;
+		return m_handle->prefix < _other.m_handle->prefix;
 	}
-	/// Equality is determined based on the string ID.
-	bool operator==(YulString const& _other) const { return m_handle.id == _other.m_handle.id; }
-	bool operator!=(YulString const& _other) const { return m_handle.id != _other.m_handle.id; }
+	/// Equality is determined based on the string handle.
+	bool operator==(YulString const& _other) const { return m_handle == _other.m_handle; }
+	bool operator!=(YulString const& _other) const { return m_handle != _other.m_handle; }
 
-	bool empty() const { return m_handle.id == 0; }
+	bool empty() const { return !m_handle; }
 	std::string const str() const
 	{
-		return YulStringRepository::instance().idToString(m_handle.id);
+		if (m_handle)
+			return m_handle->suffix > 0 ?
+				m_handle->prefix +  "_" + std::to_string(m_handle->suffix) :
+				m_handle->prefix;
+		else
+			return "";
 	}
-	std::string const prefix() const
+	std::string const& prefix() const
 	{
-		return YulStringRepository::instance().idToPrefix(m_handle.id);
+		if (m_handle)
+			return m_handle->prefix;
+		else
+		{
+			static std::string empty;
+			return empty;
+		}
 	}
-	size_t id() const { return m_handle.id; }
+	std::size_t suffix() const
+	{
+		if (m_handle)
+			return m_handle->suffix;
+		else
+			return 0;
+	}
+	YulStringRepository::Handle handle() const
+	{
+		return m_handle;
+	}
+	std::uint64_t hash() const
+	{
+		if (m_handle)
+			return m_handle->hash;
+		else
+			return YulStringRepository::emptyHash();
+	}
 
 private:
 	/// Handle of the string. Assumes that the empty string has ID zero.
-	YulStringRepository::Handle m_handle{ 0, YulStringRepository::emptyHash() };
+	YulStringRepository::Handle m_handle = nullptr;
 };
 
+}
+
+namespace std {
+template <> struct hash<yul::YulString>
+{
+	size_t operator()(yul::YulString const& _str) const
+	{
+		return _str.hash();
+	}
+};
 }

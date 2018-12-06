@@ -24,7 +24,7 @@
 #include <libyul/YulString.h>
 
 #include <set>
-#include <vector>
+#include <map>
 
 namespace yul
 {
@@ -53,7 +53,7 @@ private:
 	YulString newNameInternal(YulString _nameHint);
 
 	std::set<YulString> m_usedNames;
-	std::unordered_map<size_t, size_t> m_counters;
+	std::map<YulString, std::size_t> m_counters;
 };
 
 }
