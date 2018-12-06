@@ -18,8 +18,8 @@
 //         let f_x
 //         f_x := add(f_a, f_b)
 //         f_x := mul(f_x, f_c)
-//         let _10 := add(f_x, _2)
-//         let y := add(mload(1), _10)
+//         let _A := add(f_x, _2)
+//         let y := add(mload(1), _A)
 //     }
 //     function f(a, b, c) -> x
 //     {

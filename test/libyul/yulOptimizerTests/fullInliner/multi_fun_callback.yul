@@ -40,12 +40,12 @@
 //         let h_t
 //         h_t := 2
 //         mstore(7, h_t)
-//         let g_x := 10
-//         let g_f_x := 1
-//         mstore(0, g_f_x)
+//         let g_x_1 := 10
+//         let g_f_x_1 := 1
+//         mstore(0, g_f_x_1)
 //         mstore(7, h())
 //         g(10)
-//         mstore(1, g_f_x)
+//         mstore(1, g_f_x_1)
 //         mstore(1, x)
 //     }
 //     function g(x_1)

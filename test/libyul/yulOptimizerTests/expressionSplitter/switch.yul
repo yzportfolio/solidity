@@ -23,11 +23,11 @@
 //     default {
 //         let _8 := 3
 //         let _9 := mload(_8)
-//         let _10 := 0
-//         mstore(_10, _9)
+//         let _A := 0
+//         mstore(_A, _9)
 //     }
-//     let _11 := 4
-//     let _12 := 3
-//     let _13 := mload(_12)
-//     x := add(_13, _11)
+//     let _B := 4
+//     let _C := 3
+//     let _D := mload(_C)
+//     x := add(_D, _B)
 // }

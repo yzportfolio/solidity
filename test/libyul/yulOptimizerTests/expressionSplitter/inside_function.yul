@@ -22,8 +22,8 @@
 //     }
 //     let _8 := 2
 //     let _9 := mload(_8)
-//     let _10 := 2
-//     let _11 := mload(_10)
-//     let _12 := f(_11, _9)
-//     sstore(x, _12)
+//     let _A := 2
+//     let _B := mload(_A)
+//     let _C := f(_B, _9)
+//     sstore(x, _C)
 // }

@@ -14,11 +14,11 @@
 // fullSuite
 // {
 //     {
-//         let _12 := 0x20
-//         let allocate_ := 0x40
-//         mstore(allocate_, add(mload(allocate_), _12))
-//         let allocate_p_4 := mload(allocate_)
-//         mstore(allocate_, add(allocate_p_4, allocate_))
-//         mstore(add(allocate_p_4, 96), 2)
+//         let _C := 0x20
+//         let allocate__7 := 0x40
+//         mstore(allocate__7, add(mload(allocate__7), _C))
+//         let allocate_p_1_2 := mload(allocate__7)
+//         mstore(allocate__7, add(allocate_p_1_2, allocate__7))
+//         mstore(add(allocate_p_1_2, 96), 2)
 //     }
 // }

@@ -30,11 +30,11 @@
 //         {
 //             let _8 := 4
 //             let _9 := 2
-//             let _10 := add(a, _9)
-//             let b := mul(_10, _8)
-//             let _11 := 2
-//             let _12 := mul(b, _11)
-//             sstore(b, _12)
+//             let _A := add(a, _9)
+//             let b := mul(_A, _8)
+//             let _B := 2
+//             let _C := mul(b, _B)
+//             sstore(b, _C)
 //         }
 //     }
 // }

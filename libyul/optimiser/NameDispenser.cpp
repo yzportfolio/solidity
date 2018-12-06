@@ -39,44 +39,18 @@ NameDispenser::NameDispenser(set<YulString> _usedNames):
 
 YulString NameDispenser::newName(YulString _nameHint, YulString _context)
 {
-	YulString name = _nameHint;
-	if (name.suffix())
-		name = YulString(name.prefix());
-	else
-	{
-		auto prefixEnd = name.prefix().end();
-
-		auto it = name.prefix().rbegin();
-		while (it != name.prefix().rend() && std::isdigit(*it))
-			++it;
-		if (it != name.prefix().rend() && *it == '_')
-		{
-			++it;
-			while (it != name.prefix().rend() && *it == '_')
-				++it;
-
-			if (it != name.prefix().rbegin())
-				prefixEnd = it.base();
-		}
-		if (prefixEnd == name.prefix().end())
-			name = _nameHint;
-		else
-			name = YulString(std::string(name.prefix().begin(), prefixEnd));
-	}
-
 	if (!_context.empty())
-		return newNameInternal(YulString(_context.prefix().substr(0, 10) + '_' + name.prefix()));
+		return newNameInternal(YulString(_context.prefix().substr(0, 10) + '_' + _nameHint.prefix(), _nameHint.suffix()));
 	else
-		return newNameInternal(name);
+		return newNameInternal(_nameHint);
 }
 
 YulString NameDispenser::newNameInternal(YulString _nameHint)
 {
 	YulString name = _nameHint;
-	auto& counter = m_counters[name];
 
 	while(name.empty() || m_usedNames.count(name))
-		name = YulString(name.prefix(), ++counter);
+		name = YulString(name.prefix(), name.suffix() + 1);
 
 	m_usedNames.emplace(name);
 
