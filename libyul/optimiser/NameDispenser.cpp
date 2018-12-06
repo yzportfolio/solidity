@@ -39,41 +39,46 @@ NameDispenser::NameDispenser(set<YulString> _usedNames):
 
 YulString NameDispenser::newName(YulString _nameHint, YulString _context)
 {
-	// Shortening rules: Use a suffix of _prefix and a prefix of _context.
-	YulString prefix = _nameHint;
-
-	// If the name itself has a suffix supplied by user, get rid of it
-	// so that we have no conflicts and the order of suffix is in order.
-	std::string nameHintStr = _nameHint.str();
-	size_t underscore = nameHintStr.find_last_of("_");
-	if (underscore != std::string::npos && underscore != 0)
+	YulString name = _nameHint;
+	if (name.suffix())
+		name = YulString(name.prefix());
+	else
 	{
-		try
+		auto prefixEnd = name.prefix().end();
+
+		auto it = name.prefix().rbegin();
+		while (it != name.prefix().rend() && std::isdigit(*it))
+			++it;
+		if (it != name.prefix().rend() && *it == '_')
 		{
-			std::stoi(nameHintStr.substr(underscore + 1));
-			prefix = YulString(nameHintStr.substr(0, underscore));
-		} catch (std::invalid_argument &e) {
-			// don't do any conversion
+			++it;
+			while (it != name.prefix().rend() && *it == '_')
+				++it;
+
+			if (it != name.prefix().rbegin())
+				prefixEnd = it.base();
 		}
+		if (prefixEnd == name.prefix().end())
+			name = _nameHint;
+		else
+			name = YulString(std::string(name.prefix().begin(), prefixEnd));
 	}
 
 	if (!_context.empty())
-		prefix = YulString{_context.str().substr(0, 10) + "_" + prefix.str()};
-
-	return newNameInternal(prefix);
+		return newNameInternal(YulString(_context.prefix().substr(0, 10) + '_' + name.prefix()));
+	else
+		return newNameInternal(name);
 }
 
 YulString NameDispenser::newNameInternal(YulString _nameHint)
 {
 	YulString name = _nameHint;
+	auto& counter = m_counters[name];
 
-	if ((m_usedNames.count(name) && !m_counters.count(name.id())) || name.empty())
-		m_counters.emplace(name.id(), 0);
+	while(name.empty() || m_usedNames.count(name))
+		name = YulString(name.prefix(), ++counter);
 
-	if (m_counters.count(name.id()))
-		name = YulString(name.prefix(), ++m_counters.at(name.id()));
-	else
-		m_counters.emplace(name.id(), 0);
 	m_usedNames.emplace(name);
+
 	return name;
 }
