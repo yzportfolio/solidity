@@ -24,7 +24,7 @@
 #include <libyul/YulString.h>
 
 #include <set>
-#include <map>
+#include <unordered_map>
 
 namespace yul
 {
@@ -50,11 +50,9 @@ public:
 	YulString newName(YulString _nameHint, YulString _context = {});
 
 private:
-	YulString newNameInternal(YulString _nameHint);
+	YulString newNameInternal(YulStringRepository::PrefixHandle _nameHint);
 
-	std::map<YulString, std::size_t> m_counters;
-
-	static std::pair<YulString, size_t> splitPrefixSuffix(YulString _string, bool _ignoreSuffixValue = false);
+	std::unordered_map<YulStringRepository::PrefixHandle, std::size_t> m_counters;
 };
 
 }

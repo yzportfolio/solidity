@@ -35,59 +35,24 @@ NameDispenser::NameDispenser(Block const& _ast):
 
 NameDispenser::NameDispenser(set<YulString> _usedNames)
 {
-	m_counters[YulString()] = 1;
+	m_counters[nullptr] = 1;
 	for (auto name: _usedNames)
 	{
-		auto split = splitPrefixSuffix(name);
-		auto& counter = m_counters[split.first];
-		if (split.second + 1 > counter)
-			counter = split.second + 1;
+		auto& counter = m_counters[name.prefixHandle()];
+		if (name.suffix() + 1 > counter)
+			counter = name.suffix() + 1;
 	}
 }
 
 YulString NameDispenser::newName(YulString _nameHint, YulString _context)
 {
-	auto split = splitPrefixSuffix(_nameHint, true);
-
 	if (!_context.empty())
-		return newNameInternal(YulString(_context.str().substr(0, 10) + '_' + split.first.str()));
+		return newNameInternal(YulString(_context.str().substr(0, 10) + '_' + _nameHint.prefix(), _nameHint.suffix()).prefixHandle());
 	else
-		return newNameInternal(split.first);
+		return newNameInternal(_nameHint.prefixHandle());
 }
 
-YulString NameDispenser::newNameInternal(YulString _nameHint)
+YulString NameDispenser::newNameInternal(YulStringRepository::PrefixHandle _prefixHandle)
 {
-	auto counter = m_counters[_nameHint]++;
-	return counter > 0 ? YulString{_nameHint.str() + '_' + std::to_string(counter) } : _nameHint;
-}
-
-std::pair<YulString, size_t> NameDispenser::splitPrefixSuffix(yul::YulString _string, bool _ignoreSuffixValue)
-{
-	if (_string.empty())
-		return { _string, 0 };
-	else
-	{
-		std::string const& str = _string.str();
-
-		size_t suffix = 0;
-
-		size_t nameLength = str.size();
-
-		size_t digits = 0;
-		for (--nameLength; nameLength > 0 && std::isdigit(str[nameLength]); --nameLength)
-			if (++digits > 9)
-				return { _string, 0 };
-
-		if (str[nameLength] == '_')
-		{
-			if (!_ignoreSuffixValue && digits > 0)
-				suffix = boost::lexical_cast<std::size_t>(str.data() + nameLength + 1, digits);
-
-			while(nameLength > 0 && str[nameLength - 1] == '_') --nameLength;
-
-			return { YulString(str.substr(0, nameLength)), suffix };
-		}
-		else
-			return { _string, 0 };
-	}
+	return YulString{_prefixHandle ? _prefixHandle->prefix : "", m_counters[_prefixHandle]++ };
 }
