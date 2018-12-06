@@ -45,9 +45,8 @@ public:
 
 	struct StringData {
 		StringData() {}
-		StringData(std::string const& _prefix, std::size_t _suffix, std::uint64_t _hash): prefix(_prefix), suffix(_suffix), hash(_hash) {}
-		std::string prefix;
-		std::size_t suffix = 0;
+		StringData(std::string const& _str, std::uint64_t _hash): str(_str), hash(_hash) {}
+		std::string str;
 		std::uint64_t hash = emptyHash();
 	};
 
@@ -61,21 +60,21 @@ public:
 		static YulStringRepository inst;
 		return inst;
 	}
-	Handle stringToHandle(std::string const& _string, const std::size_t _suffix)
+	Handle stringToHandle(std::string const& _string)
 	{
-		if (_string.empty() && _suffix == 0)
+		if (_string.empty())
 			return nullptr;
-		std::uint64_t h = hash(_string, _suffix);
+		std::uint64_t h = hash(_string);
 		auto range = m_hashToHandle.equal_range(h);
 		for (auto it = range.first; it != range.second; ++it)
-			if ((it->second)->prefix == _string && (it->second)->suffix == _suffix)
+			if (it->second->str == _string)
 				return it->second;
-		m_strings.emplace_front(_string, _suffix, h);
+		m_strings.emplace_front(_string, h);
 		auto handle = &m_strings.front();
 		m_hashToHandle.emplace_hint(range.second, std::make_pair(h, handle));
 		return handle;
 	}
-	static std::uint64_t hash(std::string const& v, std::size_t s)
+	static std::uint64_t hash(std::string const& v)
 	{
 		// FNV hash - can be replaced by a better one, e.g. xxhash64
 		std::uint64_t hash = emptyHash();
@@ -83,12 +82,6 @@ public:
 		{
 			hash *= 1099511628211u;
 			hash ^= c;
-		}
-		while (s)
-		{
-			hash *= 1099511628211u;
-			hash ^= s & 0xFF;
-			s >>= 8;
 		}
 
 		return hash;
@@ -106,7 +99,7 @@ class YulString
 {
 public:
 	YulString() = default;
-	explicit YulString(std::string const& _s, const std::size_t suffix = 0): m_handle(YulStringRepository::instance().stringToHandle(_s, suffix)) {}
+	explicit YulString(std::string const& _s): m_handle(YulStringRepository::instance().stringToHandle(_s)) {}
 	explicit YulString(YulStringRepository::Handle _handle): m_handle(_handle) {}
 	YulString(YulString const&) = default;
 	YulString(YulString&&) = default;
@@ -125,40 +118,22 @@ public:
 			return _other.m_handle;
 		if (m_handle->hash < _other.m_handle->hash) return true;
 		if (_other.m_handle->hash < m_handle->hash) return false;
-		if (m_handle->suffix < _other.m_handle->suffix) return true;
-		if (_other.m_handle->suffix < m_handle->suffix) return false;
-		return m_handle->prefix < _other.m_handle->prefix;
+		return m_handle->str < _other.m_handle->str;
 	}
 	/// Equality is determined based on the string handle.
 	bool operator==(YulString const& _other) const { return m_handle == _other.m_handle; }
 	bool operator!=(YulString const& _other) const { return m_handle != _other.m_handle; }
 
 	bool empty() const { return !m_handle; }
-	std::string const str() const
+	std::string const& str() const
 	{
 		if (m_handle)
-			return m_handle->suffix > 0 ?
-				m_handle->prefix +  "_" + std::to_string(m_handle->suffix) :
-				m_handle->prefix;
-		else
-			return "";
-	}
-	std::string const& prefix() const
-	{
-		if (m_handle)
-			return m_handle->prefix;
+			return m_handle->str;
 		else
 		{
-			static std::string empty;
-			return empty;
+			static std::string emptyString;
+			return emptyString;
 		}
-	}
-	std::size_t suffix() const
-	{
-		if (m_handle)
-			return m_handle->suffix;
-		else
-			return 0;
 	}
 	YulStringRepository::Handle handle() const
 	{

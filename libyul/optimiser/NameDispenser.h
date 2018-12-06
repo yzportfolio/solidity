@@ -52,8 +52,9 @@ public:
 private:
 	YulString newNameInternal(YulString _nameHint);
 
-	std::set<YulString> m_usedNames;
 	std::map<YulString, std::size_t> m_counters;
+
+	static std::pair<YulString, size_t> splitPrefixSuffix(YulString _string, bool _ignoreSuffixValue = false);
 };
 
 }

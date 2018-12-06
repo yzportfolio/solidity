@@ -22,6 +22,7 @@
 
 #include <libyul/optimiser/NameCollector.h>
 #include <libyul/AsmData.h>
+#include <boost/lexical_cast.hpp>
 
 using namespace std;
 using namespace dev;
@@ -32,53 +33,61 @@ NameDispenser::NameDispenser(Block const& _ast):
 {
 }
 
-NameDispenser::NameDispenser(set<YulString> _usedNames):
-	m_usedNames(std::move(_usedNames))
+NameDispenser::NameDispenser(set<YulString> _usedNames)
 {
+	m_counters[YulString()] = 1;
+	for (auto name: _usedNames)
+	{
+		auto split = splitPrefixSuffix(name);
+		auto& counter = m_counters[split.first];
+		if (split.second + 1 > counter)
+			counter = split.second + 1;
+	}
 }
 
 YulString NameDispenser::newName(YulString _nameHint, YulString _context)
 {
-	YulString name = _nameHint;
-	if (name.suffix())
-		name = YulString(name.prefix());
-	else
-	{
-		auto prefixEnd = name.prefix().end();
-
-		auto it = name.prefix().rbegin();
-		while (it != name.prefix().rend() && std::isdigit(*it))
-			++it;
-		if (it != name.prefix().rend() && *it == '_')
-		{
-			++it;
-			while (it != name.prefix().rend() && *it == '_')
-				++it;
-
-			if (it != name.prefix().rbegin())
-				prefixEnd = it.base();
-		}
-		if (prefixEnd == name.prefix().end())
-			name = _nameHint;
-		else
-			name = YulString(std::string(name.prefix().begin(), prefixEnd));
-	}
+	auto split = splitPrefixSuffix(_nameHint, true);
 
 	if (!_context.empty())
-		return newNameInternal(YulString(_context.prefix().substr(0, 10) + '_' + name.prefix()));
+		return newNameInternal(YulString(_context.str().substr(0, 10) + '_' + split.first.str()));
 	else
-		return newNameInternal(name);
+		return newNameInternal(split.first);
 }
 
 YulString NameDispenser::newNameInternal(YulString _nameHint)
 {
-	YulString name = _nameHint;
-	auto& counter = m_counters[name];
+	auto counter = m_counters[_nameHint]++;
+	return counter > 0 ? YulString{_nameHint.str() + '_' + std::to_string(counter) } : _nameHint;
+}
 
-	while(name.empty() || m_usedNames.count(name))
-		name = YulString(name.prefix(), ++counter);
+std::pair<YulString, size_t> NameDispenser::splitPrefixSuffix(yul::YulString _string, bool _ignoreSuffixValue)
+{
+	if (_string.empty())
+		return { _string, 0 };
+	else
+	{
+		std::string const& str = _string.str();
 
-	m_usedNames.emplace(name);
+		size_t suffix = 0;
 
-	return name;
+		size_t nameLength = str.size();
+
+		size_t digits = 0;
+		for (--nameLength; nameLength > 0 && std::isdigit(str[nameLength]); --nameLength)
+			if (++digits > 9)
+				return { _string, 0 };
+
+		if (str[nameLength] == '_')
+		{
+			if (!_ignoreSuffixValue && digits > 0)
+				suffix = boost::lexical_cast<std::size_t>(str.data() + nameLength + 1, digits);
+
+			while(nameLength > 0 && str[nameLength - 1] == '_') --nameLength;
+
+			return { YulString(str.substr(0, nameLength)), suffix };
+		}
+		else
+			return { _string, 0 };
+	}
 }
