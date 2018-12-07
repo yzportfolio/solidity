@@ -35,10 +35,10 @@ NameDispenser::NameDispenser(Block const& _ast):
 
 NameDispenser::NameDispenser(set<YulString> _usedNames)
 {
-	m_counters[nullptr] = 1;
+	m_prefixToNextAvailableSuffix[""] = 1;
 	for (auto name: _usedNames)
 	{
-		auto& counter = m_counters[name.prefixHandle()];
+		auto& counter = m_prefixToNextAvailableSuffix[name.prefix()];
 		if (name.suffix() + 1 > counter)
 			counter = name.suffix() + 1;
 	}
@@ -47,12 +47,12 @@ NameDispenser::NameDispenser(set<YulString> _usedNames)
 YulString NameDispenser::newName(YulString _nameHint, YulString _context)
 {
 	if (!_context.empty())
-		return newNameInternal(YulString(_context.str().substr(0, 10) + '_' + _nameHint.prefix(), _nameHint.suffix()).prefixHandle());
+		return newNameInternal(YulString(_context.str().substr(0, 10) + '_' + _nameHint.prefix(), _nameHint.suffix()).prefix());
 	else
-		return newNameInternal(_nameHint.prefixHandle());
+		return newNameInternal(_nameHint.prefix());
 }
 
-YulString NameDispenser::newNameInternal(YulStringRepository::PrefixHandle _prefixHandle)
+YulString NameDispenser::newNameInternal(std::string const& _prefix)
 {
-	return YulString{_prefixHandle ? _prefixHandle->prefix : "", m_counters[_prefixHandle]++ };
+	return YulString{_prefix, m_prefixToNextAvailableSuffix[_prefix]++};
 }

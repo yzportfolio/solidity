@@ -50,9 +50,9 @@ public:
 	YulString newName(YulString _nameHint, YulString _context = {});
 
 private:
-	YulString newNameInternal(YulStringRepository::PrefixHandle _nameHint);
+	YulString newNameInternal(std::string const& _prefix);
 
-	std::unordered_map<YulStringRepository::PrefixHandle, std::size_t> m_counters;
+	std::unordered_map<std::string, std::size_t> m_prefixToNextAvailableSuffix;
 };
 
 }

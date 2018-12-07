@@ -42,20 +42,29 @@ public:
 	static constexpr std::uint64_t emptyHash() { return 14695981039346656037u; }
 	static constexpr std::uint64_t fnvPrime() { return 14695981039346656037u; }
 
-	struct PrefixData
+	struct StringData
 	{
-		PrefixData(std::string::const_iterator _begin, std::string::const_iterator _end, std::uint64_t _hash)
-			: prefix(_begin, _end), hash(_hash) {}
-		std::string prefix;
 		std::uint64_t hash;
-		bool operator<(PrefixData const& _rhs) const
+		std::uint64_t suffix;
+		std::string prefix;
+		std::string fullString() const
 		{
-			if (hash < _rhs.hash) return true;
-			if (_rhs.hash < hash) return false;
+			return suffix > 0 ? prefix + '_' + std::to_string(suffix) : prefix;
+		}
+		bool operator<(StringData const& _rhs) const
+		{
+			if (hash < _rhs.hash)
+				return true;
+			if (_rhs.hash < hash)
+				return false;
+			if (suffix < _rhs.suffix)
+				return true;
+			if (_rhs.suffix < suffix)
+				return false;
 			return prefix < _rhs.prefix;
 		}
 	};
-	using PrefixHandle = PrefixData const*;
+	using StringHandle = StringData const*;
 
 	YulStringRepository()
 	{
@@ -65,72 +74,76 @@ public:
 		static YulStringRepository inst;
 		return inst;
 	}
-	PrefixHandle prefixHandle(std::string const& _string)
-	{
-		if (_string.empty())
-			return nullptr;
 
+	static std::tuple<std::uint64_t, std::uint64_t, std::uint64_t> getHashAndRealSuffixAndPrefixLength(std::string const& _string, std::uint64_t _suffix)
+	{
 		std::uint64_t hash = emptyHash();
-		for (auto it = _string.rbegin(); it != _string.rend(); ++it)
-		{
-			hash *= fnvPrime();
-			hash ^= *it;
-		}
-
-		return prefixHandle(_string, _string.size(), hash);
-	}
-	PrefixHandle prefixHandle(std::string const& _string, std::size_t _prefixLength, std::uint64_t _hash)
-	{
-		if (!_prefixLength)
-			return nullptr;
-		auto range = m_hashToPrefixHandle.equal_range(_hash);
-		for (auto it = range.first; it != range.second; ++it)
-			if (!it->second->prefix.compare(0, it->second->prefix.size(), _string, 0, _prefixLength))
-				return it->second;
-		m_strings.emplace_front(_string.begin(), _string.begin() + _prefixLength, _hash);
-		auto handle = &m_strings.front();
-		m_hashToPrefixHandle.emplace_hint(range.second, std::make_pair(_hash, handle));
-		return handle;
-	}
-	std::tuple<PrefixHandle, std::uint64_t> splitPrefixAndSuffix(std::string const& _string)
-	{
-		if (_string.empty())
-			return { nullptr, 0 };
-
-		auto prefixLength = _string.size();
+		std::uint64_t realSuffix = 0;
+		std::uint64_t prefixLength = _string.size();
 		auto it = _string.rbegin();
 
+		if (_suffix)
+			realSuffix = _suffix;
+		else
+		{
+			for (; it != _string.rend() && '0' <= *it && *it <= '9'; ++it)
+			{
+				_suffix *= 10;
+				_suffix += *it - '0';
+			}
+			if (it != _string.rend() && *it == '_')
+			{
+				++it;
+				realSuffix = _suffix;
+			}
+		}
+
+		if (realSuffix)
+			prefixLength = _string.rend() - it;
+
+		for(auto s = prefixLength; s; s >>= 8)
+		{
+			hash *= fnvPrime();
+			hash ^= s & 0xFF;
+		}
+
+		for(auto s = _suffix; s; s >>= 8)
+		{
+			hash *= fnvPrime();
+			hash ^= s & 0xFF;
+		}
+
+		for(; it != _string.rend(); ++it)
+		{
+			hash *= fnvPrime();
+			hash ^= *it;
+		}
+
+		return { hash, realSuffix, prefixLength };
+	}
+
+	StringHandle stringHandle(std::string const& _string, std::uint64_t _suffix)
+	{
+		if (_string.empty() && !_suffix)
+			return nullptr;
 		std::uint64_t hash = emptyHash();
-		std::uint64_t suffix = 0;
+		std::uint64_t realSuffix = 0;
+		std::uint64_t prefixLength = _string.size();
+		std::tie(hash, realSuffix, prefixLength) = getHashAndRealSuffixAndPrefixLength(_string, _suffix);
 
-		// TODO: need to prevent suffix overflows
-		for (; it != _string.rend() && '0' <= *it && *it <= '9'; ++it)
-		{
-			suffix *= 10;
-			suffix += *it - '0';
-			hash *= fnvPrime();
-			hash ^= *it;
-		}
-		if (it == _string.rend() || *it != '_')
-			suffix = 0;
-		else if (suffix)
-		{
-			++it;
-			hash = emptyHash();
-			prefixLength = static_cast<std::size_t>(_string.rend() - it);
-		}
+		auto range = m_hashToStringHandle.equal_range(hash);
+		for (auto it = range.first; it != range.second; ++it)
+			if (!it->second->prefix.compare(0, it->second->prefix.size(), _string, 0, prefixLength) && it->second->suffix == realSuffix)
+				return it->second;
 
-		for (;it != _string.rend(); ++it)
-		{
-			hash *= fnvPrime();
-			hash ^= *it;
-		}
-
-		return { prefixHandle(_string, prefixLength, hash), suffix };
+		m_stringDataStore.emplace_front(StringData{hash, realSuffix, _string.substr(0, prefixLength)});
+		auto handle = &m_stringDataStore.front();
+		m_hashToStringHandle.emplace_hint(range.second, std::make_pair(hash, handle));
+		return handle;
 	}
 private:
-	std::forward_list<PrefixData> m_strings;
-	std::unordered_multimap<std::uint64_t, PrefixHandle> m_hashToPrefixHandle;
+	std::forward_list<StringData> m_stringDataStore;
+	std::unordered_multimap<std::uint64_t, StringHandle> m_hashToStringHandle;
 };
 
 /// Wrapper around handles into the YulString repository.
@@ -141,48 +154,41 @@ class YulString
 {
 public:
 	YulString() = default;
-	explicit YulString(std::string const& _s, std::uint64_t _suffix = 0): m_suffix(_suffix) {
-		if (_suffix)
-			m_prefixHandle = YulStringRepository::instance().prefixHandle(_s);
-		else
-			std::tie(m_prefixHandle, m_suffix) = YulStringRepository::instance().splitPrefixAndSuffix(_s);
-	}
+	explicit YulString(std::string const& _s, std::uint64_t _suffix = 0):
+		m_handle(YulStringRepository::instance().stringHandle(_s, _suffix)) {}
 	YulString(YulString const&) = default;
 	YulString(YulString&&) = default;
 	YulString& operator=(YulString const&) = default;
 	YulString& operator=(YulString&&) = default;
 
 	/// This is not consistent with the string <-operator!
-	/// If prefixes are identical, compare suffices.
-	/// If one prefix is empty and one is not, the empty one is smaller.
-	/// Otherwise compare according to the prefix data (compare prefix hashes and fall back to prefix strings).
+	/// If handles are identical, return false.
+	/// If one string is empty and one is not, the empty one is smaller.
+	/// Otherwise compare the string data.
 	bool operator<(YulString const& _other) const
 	{
-		if (m_prefixHandle == _other.m_prefixHandle)
-			return m_suffix < _other.m_suffix;
-		if (!m_prefixHandle || !_other.m_prefixHandle)
-			return _other.m_prefixHandle;
-		return *m_prefixHandle < *_other.m_prefixHandle;
+		if (*this == _other)
+			return false;
+		if (empty() || _other.empty())
+			return !_other.empty();
+		return *m_handle < *_other.m_handle;
 	}
-	/// Equality is determined based on prefix handle and suffix.
-	bool operator==(YulString const& _other) const
-	{
-		return m_prefixHandle == _other.m_prefixHandle && m_suffix == _other.m_suffix;
-	}
-	bool operator!=(YulString const& _other) const { return !operator==(_other); }
+	/// Equality is determined based on handles.
+	bool operator==(YulString const& _other) const { return m_handle == _other.m_handle; }
+	bool operator!=(YulString const& _other) const { return m_handle != _other.m_handle; }
 
-	bool empty() const { return !m_prefixHandle && !m_suffix; }
+	bool empty() const { return !m_handle; }
 	std::string str() const
 	{
-		if (m_prefixHandle)
-			return m_suffix > 0 ? m_prefixHandle->prefix + '_' + std::to_string(m_suffix) : m_prefixHandle->prefix;
+		if (m_handle)
+			return m_handle->fullString();
 		else
-			return m_suffix > 0 ? '_' + std::to_string(m_suffix) : "";
+			return "";
 	}
 	std::string const& prefix() const
 	{
-		if (m_prefixHandle)
-			return m_prefixHandle->prefix;
+		if (m_handle)
+			return m_handle->prefix;
 		else
 		{
 			static std::string emptyString;
@@ -191,16 +197,14 @@ public:
 	}
 	std::uint64_t suffix() const
 	{
-		return m_suffix;
-	}
-	YulStringRepository::PrefixHandle prefixHandle() const
-	{
-		return m_prefixHandle;
+		if (m_handle)
+			return m_handle->suffix;
+		else
+			return 0;
 	}
 private:
 	/// Handle of the string. Assumes that the empty string has ID zero.
-	YulStringRepository::PrefixHandle m_prefixHandle = nullptr;
-	std::uint64_t m_suffix = 0;
+	YulStringRepository::StringHandle m_handle = nullptr;
 };
 
 }

@@ -21,11 +21,11 @@
 // {
 //     {
 //         let _1 := 0x20
-//         let allocate__19 := 0x40
-//         mstore(allocate__19, add(mload(allocate__19), _1))
-//         let allocate_p_24_41 := mload(allocate__19)
-//         mstore(allocate__19, add(allocate_p_24_41, allocate__19))
-//         mstore(add(allocate_p_24_41, 96), 2)
-//         mstore(allocate__19, _1)
+//         let allocate_ := 0x40
+//         mstore(allocate_, add(mload(allocate_), _1))
+//         let allocate_p_4 := mload(allocate_)
+//         mstore(allocate_, add(allocate_p_4, allocate_))
+//         mstore(add(allocate_p_4, 96), 2)
+//         mstore(allocate_, _1)
 //     }
 // }
