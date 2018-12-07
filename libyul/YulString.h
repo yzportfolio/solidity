@@ -45,9 +45,7 @@ public:
 	class StringData
 	{
 	public:
-		StringData(std::uint64_t _hash, std::uint64_t _suffix, std::string _prefix):
-		m_hash(_hash), m_suffix(_suffix), m_prefix(std::move(_prefix)) {}
-		std::uint64_t hash() const { return m_hash; }
+		StringData(std::uint64_t _suffix, std::string _prefix): m_suffix(_suffix), m_prefix(std::move(_prefix)) {}
 		std::uint64_t suffix() const { return m_suffix; }
 		std::string const& prefix() const { return m_prefix; }
 		std::string const& fullString() const
@@ -58,10 +56,6 @@ public:
 		}
 		bool operator<(StringData const& _rhs) const
 		{
-			if (m_hash < _rhs.m_hash)
-				return true;
-			if (_rhs.m_hash < m_hash)
-				return false;
 			if (m_suffix < _rhs.m_suffix)
 				return true;
 			if (_rhs.m_suffix < m_suffix)
@@ -69,23 +63,48 @@ public:
 			return m_prefix < _rhs.m_prefix;
 		}
 	private:
-		std::uint64_t m_hash;
 		std::uint64_t m_suffix;
 		std::string m_prefix;
 		mutable std::string m_fullString;
 	};
 	using StringHandle = StringData const*;
 
-	YulStringRepository()
-	{
-	}
+	YulStringRepository() {}
 	static YulStringRepository& instance()
 	{
 		static YulStringRepository inst;
 		return inst;
 	}
 
-	static std::tuple<std::uint64_t, std::uint64_t, std::uint64_t> getHashAndRealSuffixAndPrefixLength(std::string const& _string, std::uint64_t _suffix)
+	std::pair<StringHandle, std::uint64_t> stringHandleAndHash(std::string const& _string, std::uint64_t _suffix)
+	{
+		if (_string.empty() && !_suffix)
+			return { nullptr, emptyHash() };
+		std::uint64_t hash = emptyHash();
+		std::uint64_t realSuffix = 0;
+		std::uint64_t prefixLength = _string.size();
+		std::tie(hash, realSuffix, prefixLength) = getHashAndRealSuffixAndPrefixLength(_string, _suffix);
+
+		auto range = m_hashToStringHandle.equal_range(hash);
+		for (auto it = range.first; it != range.second; ++it)
+			if (!it->second->prefix().compare(0, it->second->prefix().size(), _string, 0, prefixLength) && it->second->suffix() == realSuffix)
+				return { it->second, hash };
+
+		m_stringDataStore.emplace_front(StringData{realSuffix, _string.substr(0, prefixLength)});
+		auto handle = &m_stringDataStore.front();
+		m_hashToStringHandle.emplace_hint(range.second, std::make_pair(hash, handle));
+		return { handle, hash };
+	}
+private:
+	static constexpr std::uint64_t maxSuffix = 1000000000u;
+	static constexpr int maxDigits(std::uint64_t helper = maxSuffix) {
+		return helper > 1 ? 1 + maxDigits(helper / 10) : 0;
+	}
+
+	static std::tuple<std::uint64_t, std::uint64_t, std::uint64_t> getHashAndRealSuffixAndPrefixLength(
+		std::string const& _string,
+		std::uint64_t _suffix
+	)
 	{
 		std::uint64_t hash = emptyHash();
 		std::uint64_t realSuffix = 0;
@@ -93,10 +112,25 @@ public:
 		auto it = _string.rbegin();
 
 		if (_suffix)
-			realSuffix = _suffix;
-		else
 		{
-			for (; it != _string.rend() && '0' <= *it && *it <= '9'; ++it)
+			if (_suffix < maxSuffix)
+				realSuffix = _suffix;
+			else
+			{
+				std::uint64_t stringifiedSuffix = _suffix / maxSuffix;
+				_suffix %= maxSuffix;
+				while (stringifiedSuffix)
+				{
+					hash *= fnvPrime();
+					hash ^= '0' + (stringifiedSuffix%10);
+					stringifiedSuffix /= 10;
+				}
+			}
+		}
+		else if (!_suffix)
+		{
+			int digits = 0;
+			for (; it != _string.rend() && '0' <= *it && *it <= '9' && digits < maxDigits(); ++it, ++digits)
 			{
 				_suffix *= 10;
 				_suffix += *it - '0';
@@ -111,10 +145,10 @@ public:
 		if (realSuffix)
 			prefixLength = _string.rend() - it;
 
-		for(auto s = prefixLength; s; s >>= 8)
+		for(; it != _string.rend(); ++it)
 		{
 			hash *= fnvPrime();
-			hash ^= s & 0xFF;
+			hash ^= *it;
 		}
 
 		for(auto s = _suffix; s; s >>= 8)
@@ -123,35 +157,9 @@ public:
 			hash ^= s & 0xFF;
 		}
 
-		for(; it != _string.rend(); ++it)
-		{
-			hash *= fnvPrime();
-			hash ^= *it;
-		}
-
 		return { hash, realSuffix, prefixLength };
 	}
 
-	StringHandle stringHandle(std::string const& _string, std::uint64_t _suffix)
-	{
-		if (_string.empty() && !_suffix)
-			return nullptr;
-		std::uint64_t hash = emptyHash();
-		std::uint64_t realSuffix = 0;
-		std::uint64_t prefixLength = _string.size();
-		std::tie(hash, realSuffix, prefixLength) = getHashAndRealSuffixAndPrefixLength(_string, _suffix);
-
-		auto range = m_hashToStringHandle.equal_range(hash);
-		for (auto it = range.first; it != range.second; ++it)
-			if (!it->second->prefix().compare(0, it->second->prefix().size(), _string, 0, prefixLength) && it->second->suffix() == realSuffix)
-				return it->second;
-
-		m_stringDataStore.emplace_front(StringData{hash, realSuffix, _string.substr(0, prefixLength)});
-		auto handle = &m_stringDataStore.front();
-		m_hashToStringHandle.emplace_hint(range.second, std::make_pair(hash, handle));
-		return handle;
-	}
-private:
 	std::forward_list<StringData> m_stringDataStore;
 	std::unordered_multimap<std::uint64_t, StringHandle> m_hashToStringHandle;
 };
@@ -164,8 +172,10 @@ class YulString
 {
 public:
 	YulString() = default;
-	explicit YulString(std::string const& _s, std::uint64_t _suffix = 0):
-		m_handle(YulStringRepository::instance().stringHandle(_s, _suffix)) {}
+	explicit YulString(std::string const& _s, std::uint64_t _suffix = 0)
+	{
+		std::tie(m_handle, m_hash) = YulStringRepository::instance().stringHandleAndHash(_s, _suffix);
+	}
 	YulString(YulString const&) = default;
 	YulString(YulString&&) = default;
 	YulString& operator=(YulString const&) = default;
@@ -181,6 +191,10 @@ public:
 			return false;
 		if (empty() || _other.empty())
 			return !_other.empty();
+		if (m_hash < _other.m_hash)
+			return true;
+		if (_other.m_hash < m_hash)
+			return false;
 		return *m_handle < *_other.m_handle;
 	}
 	/// Equality is determined based on handles.
@@ -215,6 +229,7 @@ public:
 private:
 	/// Handle of the string. Assumes that the empty string has ID zero.
 	YulStringRepository::StringHandle m_handle = nullptr;
+	std::uint64_t m_hash = YulStringRepository::emptyHash();
 };
 
 }

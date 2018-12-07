@@ -1,12 +1,11 @@
-// yul
-{ { let aanteuhdaoneudbrgkjiuaothduiathudaoeuh:u256 } { let aanteuhdaoneudbrgkjiuaothduiathudaoeuh:u256 } }
+{ { let a_9999999999999999999999999999999999999999999999999999 } { let a_9999999999999999999999999999999999999999999999999999 } }
 // ----
 // disambiguator
 // {
 //     {
-//         let aanteuhdaoneudbrgkjiuaothduiathudaoeuh:u256
+//         let a_9999999999999999999999999999999999999999999999999999
 //     }
 //     {
-//         let aanteuhdaoneudbrgkjiuaothduiathudaoeuh_1:u256
+//         let a_9999999999999999999999999999999999999999999999999999_1
 //     }
 // }
