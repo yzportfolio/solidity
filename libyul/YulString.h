@@ -42,27 +42,37 @@ public:
 	static constexpr std::uint64_t emptyHash() { return 14695981039346656037u; }
 	static constexpr std::uint64_t fnvPrime() { return 14695981039346656037u; }
 
-	struct StringData
+	class StringData
 	{
-		std::uint64_t hash;
-		std::uint64_t suffix;
-		std::string prefix;
-		std::string fullString() const
+	public:
+		StringData(std::uint64_t _hash, std::uint64_t _suffix, std::string _prefix):
+		m_hash(_hash), m_suffix(_suffix), m_prefix(std::move(_prefix)) {}
+		std::uint64_t hash() const { return m_hash; }
+		std::uint64_t suffix() const { return m_suffix; }
+		std::string const& prefix() const { return m_prefix; }
+		std::string const& fullString() const
 		{
-			return suffix > 0 ? prefix + '_' + std::to_string(suffix) : prefix;
+			if (m_fullString.empty())
+				m_fullString = m_suffix > 0 ? m_prefix + '_' + std::to_string(m_suffix) : m_prefix;
+			return m_fullString;
 		}
 		bool operator<(StringData const& _rhs) const
 		{
-			if (hash < _rhs.hash)
+			if (m_hash < _rhs.m_hash)
 				return true;
-			if (_rhs.hash < hash)
+			if (_rhs.m_hash < m_hash)
 				return false;
-			if (suffix < _rhs.suffix)
+			if (m_suffix < _rhs.m_suffix)
 				return true;
-			if (_rhs.suffix < suffix)
+			if (_rhs.m_suffix < m_suffix)
 				return false;
-			return prefix < _rhs.prefix;
+			return m_prefix < _rhs.m_prefix;
 		}
+	private:
+		std::uint64_t m_hash;
+		std::uint64_t m_suffix;
+		std::string m_prefix;
+		mutable std::string m_fullString;
 	};
 	using StringHandle = StringData const*;
 
@@ -133,7 +143,7 @@ public:
 
 		auto range = m_hashToStringHandle.equal_range(hash);
 		for (auto it = range.first; it != range.second; ++it)
-			if (!it->second->prefix.compare(0, it->second->prefix.size(), _string, 0, prefixLength) && it->second->suffix == realSuffix)
+			if (!it->second->prefix().compare(0, it->second->prefix().size(), _string, 0, prefixLength) && it->second->suffix() == realSuffix)
 				return it->second;
 
 		m_stringDataStore.emplace_front(StringData{hash, realSuffix, _string.substr(0, prefixLength)});
@@ -178,17 +188,17 @@ public:
 	bool operator!=(YulString const& _other) const { return m_handle != _other.m_handle; }
 
 	bool empty() const { return !m_handle; }
-	std::string str() const
+	std::string const& str() const
 	{
 		if (m_handle)
 			return m_handle->fullString();
 		else
-			return "";
+			return prefix();
 	}
 	std::string const& prefix() const
 	{
 		if (m_handle)
-			return m_handle->prefix;
+			return m_handle->prefix();
 		else
 		{
 			static std::string emptyString;
@@ -198,7 +208,7 @@ public:
 	std::uint64_t suffix() const
 	{
 		if (m_handle)
-			return m_handle->suffix;
+			return m_handle->suffix();
 		else
 			return 0;
 	}
