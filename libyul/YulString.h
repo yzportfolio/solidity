@@ -39,14 +39,20 @@ class YulString;
 class YulStringRepository: boost::noncopyable
 {
 public:
-	static constexpr std::uint64_t emptyHash() { return 14695981039346656037u; }
-	static constexpr std::uint64_t fnvPrime() { return 14695981039346656037u; }
+//	32-bit hashes are slower on 64-bit systems, but may be faster with Emscripten/asm.js
+//	using HashType = std::uint32_t;
+//	static constexpr std::uint32_t emptyHash() { return 2166136261u; }
+//	static constexpr std::uint32_t fnvPrime() { return 16777619u; }
+	using HashType = std::uint64_t;
+	static constexpr HashType emptyHash() { return 14695981039346656037u; }
+	static constexpr HashType fnvPrime() { return 14695981039346656037u; }
+	using SuffixType = std::uint64_t;
 
 	class StringData
 	{
 	public:
-		StringData(std::uint64_t _suffix, std::string _prefix): m_suffix(_suffix), m_prefix(std::move(_prefix)) {}
-		std::uint64_t suffix() const { return m_suffix; }
+		StringData(SuffixType _suffix, std::string _prefix): m_suffix(_suffix), m_prefix(std::move(_prefix)) {}
+		SuffixType suffix() const { return m_suffix; }
 		std::string const& prefix() const { return m_prefix; }
 		std::string const& fullString() const
 		{
@@ -63,7 +69,7 @@ public:
 			return m_prefix < _rhs.m_prefix;
 		}
 	private:
-		std::uint64_t m_suffix;
+		SuffixType m_suffix;
 		std::string m_prefix;
 		mutable std::string m_fullString;
 	};
@@ -76,13 +82,13 @@ public:
 		return inst;
 	}
 
-	std::pair<StringHandle, std::uint64_t> stringHandleAndHash(std::string const& _string, std::uint64_t _suffix)
+	std::pair<StringHandle, HashType> stringHandleAndHash(std::string const& _string, SuffixType _suffix)
 	{
 		if (_string.empty() && !_suffix)
 			return { nullptr, emptyHash() };
-		std::uint64_t hash = emptyHash();
-		std::uint64_t realSuffix = 0;
-		std::uint64_t prefixLength = _string.size();
+		HashType hash = emptyHash();
+		SuffixType realSuffix = 0;
+		std::size_t prefixLength = _string.size();
 		std::tie(hash, realSuffix, prefixLength) = getHashAndRealSuffixAndPrefixLength(_string, _suffix);
 
 		auto range = m_hashToStringHandle.equal_range(hash);
@@ -96,19 +102,19 @@ public:
 		return { handle, hash };
 	}
 private:
-	static constexpr std::uint64_t maxSuffix = 1000000000u;
-	static constexpr int maxDigits(std::uint64_t helper = maxSuffix) {
+	static constexpr SuffixType maxSuffix = 1000000000u;
+	static constexpr int maxDigits(SuffixType helper = maxSuffix) {
 		return helper > 1 ? 1 + maxDigits(helper / 10) : 0;
 	}
 
-	static std::tuple<std::uint64_t, std::uint64_t, std::uint64_t> getHashAndRealSuffixAndPrefixLength(
+	static std::tuple<HashType, SuffixType, std::size_t> getHashAndRealSuffixAndPrefixLength(
 		std::string const& _string,
-		std::uint64_t _suffix
+		SuffixType _suffix
 	)
 	{
-		std::uint64_t hash = emptyHash();
-		std::uint64_t realSuffix = 0;
-		std::uint64_t prefixLength = _string.size();
+		HashType hash = emptyHash();
+		SuffixType realSuffix = 0;
+		std::size_t prefixLength = _string.size();
 		auto it = _string.rbegin();
 
 		if (_suffix)
@@ -117,12 +123,12 @@ private:
 				realSuffix = _suffix;
 			else
 			{
-				std::uint64_t stringifiedSuffix = _suffix / maxSuffix;
+				SuffixType stringifiedSuffix = _suffix / maxSuffix;
 				_suffix %= maxSuffix;
 				while (stringifiedSuffix)
 				{
+					hash ^= static_cast<std::uint8_t>('0' + (stringifiedSuffix % 10));
 					hash *= fnvPrime();
-					hash ^= '0' + (stringifiedSuffix%10);
 					stringifiedSuffix /= 10;
 				}
 			}
@@ -147,21 +153,21 @@ private:
 
 		for(; it != _string.rend(); ++it)
 		{
+			hash ^= static_cast<std::uint8_t>(*it);
 			hash *= fnvPrime();
-			hash ^= *it;
 		}
 
 		for(auto s = _suffix; s; s >>= 8)
 		{
+			hash ^= static_cast<std::uint8_t>(s);
 			hash *= fnvPrime();
-			hash ^= s & 0xFF;
 		}
 
 		return { hash, realSuffix, prefixLength };
 	}
 
 	std::forward_list<StringData> m_stringDataStore;
-	std::unordered_multimap<std::uint64_t, StringHandle> m_hashToStringHandle;
+	std::unordered_multimap<HashType, StringHandle> m_hashToStringHandle;
 };
 
 /// Wrapper around handles into the YulString repository.
@@ -171,8 +177,10 @@ private:
 class YulString
 {
 public:
+	using SuffixType = YulStringRepository::SuffixType;
+
 	YulString() = default;
-	explicit YulString(std::string const& _s, std::uint64_t _suffix = 0)
+	explicit YulString(std::string const& _s, SuffixType _suffix = 0)
 	{
 		std::tie(m_handle, m_hash) = YulStringRepository::instance().stringHandleAndHash(_s, _suffix);
 	}
@@ -219,7 +227,7 @@ public:
 			return emptyString;
 		}
 	}
-	std::uint64_t suffix() const
+	SuffixType suffix() const
 	{
 		if (m_handle)
 			return m_handle->suffix();
@@ -229,7 +237,7 @@ public:
 private:
 	/// Handle of the string. Assumes that the empty string has ID zero.
 	YulStringRepository::StringHandle m_handle = nullptr;
-	std::uint64_t m_hash = YulStringRepository::emptyHash();
+	YulStringRepository::HashType m_hash = YulStringRepository::emptyHash();
 };
 
 }

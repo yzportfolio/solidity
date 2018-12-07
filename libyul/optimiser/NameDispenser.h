@@ -52,7 +52,7 @@ public:
 private:
 	YulString newNameInternal(std::string const& _prefix);
 
-	std::unordered_map<std::string, std::uint64_t> m_prefixToNextAvailableSuffix;
+	std::unordered_map<std::string, YulString::SuffixType> m_prefixToNextAvailableSuffix;
 };
 
 }
