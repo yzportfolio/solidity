@@ -46,7 +46,6 @@ else
     function printError() { echo "$(tput setaf 1)$1$(tput sgr0)"; }
 fi
 
-
 function compileFull()
 {
     local expected_exit_code=0
@@ -306,6 +305,9 @@ SOLTMPDIR=$(mktemp -d)
     REPO_ROOT=$(pwd) # make it absolute
     cd "$SOLTMPDIR"
     "$REPO_ROOT"/scripts/isolate_tests.py "$REPO_ROOT"/docs/ docs
+    # Copy config needed for solhint
+    cp "$REPO_ROOT"/test/.solhint.json "$SOLTMPDIR"/.solhint.json
+
     for f in *.sol
     do
         # The contributors guide uses syntax tests, but we cannot
@@ -315,6 +317,10 @@ SOLTMPDIR=$(mktemp -d)
             continue
         fi
         echo "$f"
+
+        # Only report errors
+        solhint -q -f unix "$SOLTMPDIR/$f"
+
         opts=''
         # We expect errors if explicitly stated, or if imports
         # are used (in the style guide)
