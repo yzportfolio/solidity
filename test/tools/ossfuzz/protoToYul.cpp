@@ -91,6 +91,12 @@ void ProtoConverter::visit(Expression const& _x)
 		case Expression::kUnop:
 			visit(_x.unop());
 			break;
+		case Expression::kTop:
+			visit(_x.top());
+			break;
+		case Expression::kNop:
+			visit(_x.nop());
+			break;
 		case Expression::EXPR_ONEOF_NOT_SET:
 			m_output << "1";
 			break;
@@ -291,15 +297,6 @@ void ProtoConverter::visit(TernaryOp const& _x)
 		case TernaryOp::MULM:
 			m_output << "mulmod";
 			break;
-		case TernaryOp::CALLDATACOPY:
-			m_output << "calldatacopy";
-			break;
-		case TernaryOp::CODECOPY:
-			m_output << "codecopy";
-			break;
-		case TernaryOp::RETURNDATACOPY:
-			m_output << "returndatacopy";
-			break;
 	}
 	m_output << "(";
 	visit(_x.arg1());
@@ -335,23 +332,41 @@ void ProtoConverter::visit(NullaryOp const& _x)
 	}
 }
 
-void ProtoConverter::visit(FouraryOp const& _x)
+void ProtoConverter::visit(CopyFunc const& _x)
 {
-	switch (_x.op())
+	switch (_x.ct())
 	{
-		case FouraryOp::EXTCODECOPY:
-			m_output << "extcodecopy";
+		case CopyFunc::CALLDATA:
+			m_output << "calldatacopy";
+			break;
+		case CopyFunc::CODE:
+			m_output << "codecopy";
+			break;
+		case CopyFunc::RETURNDATA:
+			m_output << "returndatacopy";
 			break;
 	}
 	m_output << "(";
-	visit(_x.arg1());
+	visit(_x.target());
 	m_output << ", ";
-	visit(_x.arg2());
+	visit(_x.source());
 	m_output << ", ";
-	visit(_x.arg3());
+	visit(_x.size());
+	m_output << ")\n";
+}
+
+void ProtoConverter::visit(ExtCodeCopy const& _x)
+{
+	m_output << "extcodecopy"
+	m_output << "(";
+	visit(_x.addr());
 	m_output << ", ";
-	visit(_x.arg4());
-	m_output << ")";
+	visit(_x.target());
+	m_output << ", ";
+	visit(_x.source());
+	m_output << ", ";
+	visit(_x.size());
+	m_output << ")\n";
 }
 
 void ProtoConverter::visit(LogFunc const& _x)
@@ -524,6 +539,14 @@ void ProtoConverter::visit(Statement const& _x, bool _isFor)
 		case Statement::kContstmt:
 			if (_isFor)
 				m_output << "continue\n";
+		case Statement::kLogFunc:
+			visit(_x.log_func());
+			break;
+		case Statement::kCopyFunc:
+			visit(_x.copy_func());
+			break;
+		case Statement::kExtcodeCopy:
+			visit(_x.extcode_copy());
 			break;
 		case Statement::STMT_ONEOF_NOT_SET:
 			break;

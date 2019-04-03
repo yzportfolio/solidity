@@ -118,9 +118,6 @@ message TernaryOp {
   enum TOp {
     ADDM = 0;
     MULM = 1;
-    CALLDATACOPY = 2;
-    CODECOPY = 3;
-    RETURNDATACOPY = 4;
   }
   required TOp op = 1;
   required Expression arg1 = 2;
@@ -128,15 +125,23 @@ message TernaryOp {
   required Expression arg3 = 4;
 }
 
-message FouraryOp {
-  enum FOp {
-    EXTCODECOPY = 1;
+message CopyFunc {
+  enum CopyType {
+    CALLDATA = 0;
+    CODE = 1;
+    RETURNDATA = 2;
   }
-  required FOp op = 1;
-  required Expression arg1 = 2;
-  required Expression arg2 = 3;
-  required Expression arg3 = 4;
-  required Expression arg4 = 5;
+  required CopyType ct = 1;
+  required Expression target = 2;
+  required Expression source = 3;
+  required Expression size = 4;
+}
+
+message ExtCodeCopy {
+  required Expression addr = 1;
+  required Expression target = 2;
+  required Expression source = 3;
+  required Expression size = 4;
 }
 
 message NullaryOp {
@@ -185,6 +190,8 @@ message Expression {
     Literal cons = 2;
     BinaryOp binop = 3;
     UnaryOp unop = 4;
+    TernaryOp top = 5;
+    NullaryOp nop = 6;
   }
 }
 
@@ -227,6 +234,9 @@ message Statement {
     SwitchStmt          switchstmt    = 7;
     BreakStmt           breakstmt     = 8;
     ContinueStmt        contstmt      = 9;
+    LogFunc             log_func      = 8;
+    CopyFunc            copy_func     = 9;
+    ExtCodeCopy         extcode_copy  = 10;
   }
 }
 

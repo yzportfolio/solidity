@@ -65,9 +65,10 @@ private:
 	void visit(TernaryOp const&);
 	void visit(NullaryOp const&);
 	void visit(LogFunc const&);
-	void visit(FouraryOp const&);
-	template<typename T, typename... R>
-	void visit(google::protobuf::RepeatedPtrField<T> const& _repeated_field, R... _r);
+	void visit(CopyFunc const&);
+	void visit(ExtCodeCopy const&);
+	template <class T>
+	void visit(google::protobuf::RepeatedPtrField<T> const& _repeated_field);
 
 	std::string createHex(std::string const& _hexBytes) const;
 	std::string createAlphaNum(std::string const& _strBytes) const;
