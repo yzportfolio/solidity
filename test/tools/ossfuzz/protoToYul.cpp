@@ -294,25 +294,65 @@ void ProtoConverter::visit(LogFunc const& _x)
 	{
 		case LogFunc::ZERO:
 			m_output << "log0";
+			m_output << "(";
+			visit(_x.pos());
+			m_output << ", ";
+			visit(_x.size());
+			m_output << ")\n";
 			break;
 		case LogFunc::ONE:
 			m_output << "log1";
+			m_output << "(";
+			visit(_x.pos());
+			m_output << ", ";
+			visit(_x.size());
+			m_output << ", ";
+			visit(_x.t1());
+			m_output << ")\n";
 			break;
 		case LogFunc::TWO:
 			m_output << "log2";
+			m_output << "(";
+			visit(_x.pos());
+			m_output << ", ";
+			visit(_x.size());
+			m_output << ", ";
+			visit(_x.t1());
+			m_output << ", ";
+			visit(_x.t2());
+			m_output << ")\n";
 			break;
 		case LogFunc::THREE:
 			m_output << "log3";
+			m_output << "(";
+			visit(_x.pos());
+			m_output << ", ";
+			visit(_x.size());
+			m_output << ", ";
+			visit(_x.t1());
+			m_output << ", ";
+			visit(_x.t2());
+			m_output << ", ";
+			visit(_x.t3());
+			m_output << ")\n";
 			break;
 		case LogFunc::FOUR:
 			m_output << "log4";
+			m_output << "(";
+			visit(_x.pos());
+			m_output << ", ";
+			visit(_x.size());
+			m_output << ", ";
+			visit(_x.t1());
+			m_output << ", ";
+			visit(_x.t2());
+			m_output << ", ";
+			visit(_x.t3());
+			m_output << ", ";
+			visit(_x.t4());
+			m_output << ")\n";
 			break;
 	}
-	m_output << "(";
-	visit(_x.pos());
-	m_output << ", ";
-	visit(_x.size());
-	m_output << ")\n";
 }
 
 void ProtoConverter::visit(AssignmentStatement const& _x)

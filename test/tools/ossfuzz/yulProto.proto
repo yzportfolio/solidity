@@ -142,6 +142,10 @@ message LogFunc {
   required Expression pos = 1;
   required Expression size = 2;
   required Verbosity ver = 3;
+  required Expression t1 = 4;
+  required Expression t2 = 5;
+  required Expression t3 = 6;
+  required Expression t4 = 7;
 }
 
 message Expression {
