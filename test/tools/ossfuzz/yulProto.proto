@@ -111,14 +111,37 @@ message UnaryOp {
   required Expression operand = 2;
 }
 
+message NullaryOp {
+  enum NOp {
+    PC = 1;
+    MSIZE = 2;
+    GAS = 3;
+  }
+  required NOp op = 1;
+}
+
 message StoreFunc {
   enum Storage {
     MSTORE = 0;
     SSTORE = 1;
+    MSTORE8 = 2;
   }
   required Expression loc = 1;
   required Expression val = 2;
   required Storage st = 3;
+}
+
+message LogFunc {
+  enum Verbosity {
+    ZERO = 0;
+    ONE = 1;
+    TWO = 2;
+    THREE = 3;
+    FOUR = 4;
+  }
+  required Expression pos = 1;
+  required Expression size = 2;
+  required Verbosity ver = 3;
 }
 
 message Expression {

@@ -272,6 +272,49 @@ void ProtoConverter::visit(UnaryOp const& _x)
 	m_output << ")";
 }
 
+void ProtoConverter::visit(NullaryOp const& _x)
+{
+	switch (_x.op())
+	{
+		case NullaryOp::PC:
+			m_output << "pc()";
+			break;
+		case NullaryOp::MSIZE:
+			m_output << "msize()";
+			break;
+		case NullaryOp::GAS:
+			m_output << "gas()";
+			break;
+	}
+}
+
+void ProtoConverter::visit(LogFunc const& _x)
+{
+	switch (_x.ver)
+	{
+		case LogFunc::ZERO:
+			m_output << "log0";
+			break;
+		case LogFunc::ONE:
+			m_output << "log1";
+			break;
+		case LogFunc::TWO:
+			m_output << "log2";
+			break;
+		case LogFunc::THREE:
+			m_output << "log3";
+			break;
+		case LogFunc::FOUR:
+			m_output << "log4";
+			break;
+	}
+	m_output << "(";
+	visit(_x.pos());
+	m_output << ", ";
+	visit(_x.size());
+	m_output << ")\n";
+}
+
 void ProtoConverter::visit(AssignmentStatement const& _x)
 {
 	visit(_x.ref_id());
@@ -297,6 +340,9 @@ void ProtoConverter::visit(StoreFunc const& _x)
 			break;
 		case StoreFunc::SSTORE:
 			m_output << "sstore(";
+			break;
+		case StoreFunc::MSTORE8:
+			m_output << "mstore8(";
 			break;
 	}
 	visit(_x.loc());
