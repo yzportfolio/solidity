@@ -266,6 +266,15 @@ void ProtoConverter::visit(UnaryOp const& _x)
 		case UnaryOp::ISZERO:
 			m_output << "iszero";
 			break;
+		case UnaryOp::CALLDATALOAD:
+			m_output << "calldataload";
+			break;
+		case UnaryOp::EXTCODESIZE:
+			m_output << "extcodesize";
+			break;
+		case UnaryOp::EXTCODEHASH:
+			m_output << "extcodehash";
+			break;
 	}
 	m_output << "(";
 	visit(_x.operand());
@@ -281,6 +290,15 @@ void ProtoConverter::visit(TernaryOp const& _x)
 			break;
 		case TernaryOp::MULM:
 			m_output << "mulmod";
+			break;
+		case TernaryOp::CALLDATACOPY:
+			m_output << "calldatacopy";
+			break;
+		case TernaryOp::CODECOPY:
+			m_output << "codecopy";
+			break;
+		case TernaryOp::RETURNDATACOPY:
+			m_output << "returndatacopy";
 			break;
 	}
 	m_output << "(";
@@ -305,7 +323,35 @@ void ProtoConverter::visit(NullaryOp const& _x)
 		case NullaryOp::GAS:
 			m_output << "gas()";
 			break;
+		case NullaryOp::CALLDATASIZE:
+			m_output << "calldatasize()";
+			break;
+		case NullaryOp::CODESIZE:
+			m_output << "codesize()";
+			break;
+		case NullaryOp::RETURNDATASIZE:
+			m_output << "returndatasize()";
+			break;
 	}
+}
+
+void ProtoConverter::visit(FouraryOp const& _x)
+{
+	switch (_x.op())
+	{
+		case FouraryOp::EXTCODECOPY:
+			m_output << "extcodecopy";
+			break;
+	}
+	m_output << "(";
+	visit(_x.arg1());
+	m_output << ", ";
+	visit(_x.arg2());
+	m_output << ", ";
+	visit(_x.arg3());
+	m_output << ", ";
+	visit(_x.arg4());
+	m_output << ")";
 }
 
 void ProtoConverter::visit(LogFunc const& _x)

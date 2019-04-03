@@ -106,6 +106,9 @@ message UnaryOp {
     MLOAD = 1;
     SLOAD = 2;
     ISZERO = 3;
+    CALLDATALOAD = 4;
+    EXTCODESIZE = 5;
+    EXTCODEHASH = 6;
   }
   required UOp op = 1;
   required Expression operand = 2;
@@ -115,17 +118,35 @@ message TernaryOp {
   enum TOp {
     ADDM = 0;
     MULM = 1;
+    CALLDATACOPY = 2;
+    CODECOPY = 3;
+    RETURNDATACOPY = 4;
   }
   required TOp op = 1;
   required Expression arg1 = 2;
   required Expression arg2 = 3;
   required Expression arg3 = 4;
+}
+
+message FouraryOp {
+  enum FOp {
+    EXTCODECOPY = 1;
+  }
+  required FOp op = 1;
+  required Expression arg1 = 2;
+  required Expression arg2 = 3;
+  required Expression arg3 = 4;
+  required Expression arg4 = 5;
+}
 
 message NullaryOp {
   enum NOp {
     PC = 1;
     MSIZE = 2;
     GAS = 3;
+    CALLDATASIZE = 4;
+    CODESIZE = 5;
+    RETURNDATASIZE = 6;
   }
   required NOp op = 1;
 }
