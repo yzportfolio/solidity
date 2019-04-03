@@ -310,7 +310,7 @@ void ProtoConverter::visit(NullaryOp const& _x)
 
 void ProtoConverter::visit(LogFunc const& _x)
 {
-	switch (_x.ver)
+	switch (_x.ver())
 	{
 		case LogFunc::ZERO:
 			m_output << "log0";
