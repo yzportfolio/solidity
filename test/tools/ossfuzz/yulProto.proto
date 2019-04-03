@@ -234,9 +234,9 @@ message Statement {
     SwitchStmt          switchstmt    = 7;
     BreakStmt           breakstmt     = 8;
     ContinueStmt        contstmt      = 9;
-    LogFunc             log_func      = 8;
-    CopyFunc            copy_func     = 9;
-    ExtCodeCopy         extcode_copy  = 10;
+    LogFunc             log_func      = 10;
+    CopyFunc            copy_func     = 11;
+    ExtCodeCopy         extcode_copy  = 12;
   }
 }
 

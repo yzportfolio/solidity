@@ -357,7 +357,7 @@ void ProtoConverter::visit(CopyFunc const& _x)
 
 void ProtoConverter::visit(ExtCodeCopy const& _x)
 {
-	m_output << "extcodecopy"
+	m_output << "extcodecopy";
 	m_output << "(";
 	visit(_x.addr());
 	m_output << ", ";
@@ -539,6 +539,7 @@ void ProtoConverter::visit(Statement const& _x, bool _isFor)
 		case Statement::kContstmt:
 			if (_isFor)
 				m_output << "continue\n";
+			break;
 		case Statement::kLogFunc:
 			visit(_x.log_func());
 			break;
