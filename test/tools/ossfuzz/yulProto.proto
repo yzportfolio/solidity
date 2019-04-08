@@ -155,6 +155,36 @@ message SwitchStmt {
   optional Block default_block = 3;
 }
 
+message StopInvalidStmt {
+  enum Type {
+    STOP = 0;
+    INVALID = 1;
+  }
+  required Type stmt = 1;
+}
+
+message RetRevStmt {
+  enum Type {
+    RETURN = 0;
+    REVERT = 1;
+  }
+  required Type stmt = 1;
+  required Expression pos = 2;
+  required Expression size = 3;
+}
+
+message SelfDestructStmt {
+  required Expression addr = 1;
+}
+
+message TerminatingStmt {
+  oneof term_oneof {
+    StopInvalidStmt   stop_invalid = 1;
+    RetRevStmt        ret_rev = 2;
+    SelfDestructStmt  self_des = 3;
+  }
+}
+
 message Statement {
   oneof stmt_oneof {
     VarDecl             decl          = 1;
@@ -164,6 +194,7 @@ message Statement {
     Block               blockstmt     = 5;
     ForStmt             forstmt       = 6;
     SwitchStmt          switchstmt    = 7;
+    TerminatingStmt     terminatestmt = 8;
   }
 }
 
