@@ -172,7 +172,13 @@ message Block {
 }
 
 message Function {
-  required Block statements = 1;
+  required Block statements  = 1;
+  required uint32 inparams   = 2;
+  repeated uint32 outparams  = 3;
+}
+
+message Program {
+  repeated Function funcs = 1;
 }
 
 package yul.test.yul_fuzzer;

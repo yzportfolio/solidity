@@ -72,6 +72,7 @@ void ProtoConverter::visit(Literal const& _x)
 // Reference any index in [0, m_numLiveVars-1] or [0, m_numLiveVars)
 void ProtoConverter::visit(VarRef const& _x)
 {
+	assert(m_numLiveVars);
 	m_output  << "x_" << (static_cast<uint32_t>(_x.varnum()) % m_numLiveVars);
 }
 
@@ -388,17 +389,78 @@ void ProtoConverter::visit(Block const& _x)
 
 void ProtoConverter::visit(Function const& _x)
 {
-	m_output << "{\n"
-	    << "let a,b := foo(calldataload(0),calldataload(32),calldataload(64),calldataload(96),calldataload(128),"
-	    << "calldataload(160),calldataload(192),calldataload(224))\n"
-	    << "sstore(0, a)\n"
-	    << "sstore(32, b)\n"
-	    << "function foo(x_0, x_1, x_2, x_3, x_4, x_5, x_6, x_7) -> x_8, x_9\n";
+	int numInParams = _x.inparams % maxInputParams;
+	int numOutParams = _x.outparams % maxOutputParams;
+	int numTotalParams = numInParams + numOutParams;
+
+	if (numOutParams == 0)
+		return;
+
+	// Signature
+	m_output << "function foo_" << std::string(m_numFunctions);
+	m_output << "(";
+	m_numVarsPerScope.push(0);
+
+	for ( ; m_numVarsPerScope.top() < numInParams; m_numVarsPerScope.top()++)
+	{
+		m_output << "x_" << std::to_string(m_numLiveVars++);
+		if (m_numVarsPerScope.top() < numInParams - 1)
+			m_output << ", ";
+	}
+	m_output << ")";
+	m_output << " -> ";
+	for ( ; m_numVarsPerScope.top() < numTotalParams; m_numVarsPerScope.top()++)
+	{
+		m_output << "x_" << std::to_string(m_numLiveVars++);
+		if (m_numVarsPerScope.top() < numTotalParams - 1)
+			m_output << ", ";
+		else
+			m_output << "\n";
+	}
+	m_numVarsPerScope.top()--;
+	// Body
 	visit(_x.statements());
+	m_numLiveVars -= m_numVarsPerScope.top();
+	m_numVarsPerScope.pop();
+	assert(m_numLiveVars == 0);
+
+	m_output << "let ";
+	for (int i = 0; i < numOutParams; i++)
+	{
+		m_output << "a_" << std::to_string(m_numGlobals++);
+		if (m_numGlobals < numOutParams - 1)
+			m_output << ",";
+		else
+			m_output << " := ";
+	}
+
+	m_output << "foo_" << std::to_string(m_numFunctions++);
+	m_output << "(";
+	for (int i = 0; i < numOutParams; i++)
+	{
+		m_output << "calldataload(" << std::to_string(i*32) << ")";
+		if (i < numOutParams - 1)
+			m_output << ",";
+		else
+			m_output << ")\n";
+	}
+
+	for (int i = 0; i < numOutParams; i++)
+	{
+		m_output << "sstore(" << std::to_string(i*32) << ", a_" << std::to_string(i) << ")\n";
+	}
+}
+
+void ProtoConverter::visit(Program const& _x)
+{
+	m_output << "{\n";
+	if (_x.funcs_size() > 0)
+		for (auto const& f: _x.funcs())
+			visit(f);
 	m_output << "}\n";
 }
 
-string ProtoConverter::functionToString(Function const& _input)
+string ProtoConverter::programToString(Program const& _input)
 {
 	visit(_input);
 	return m_output.str();
@@ -409,5 +471,5 @@ string ProtoConverter::protoToYul(const uint8_t* _data, size_t _size)
 	Function message;
 	if (!message.ParsePartialFromArray(_data, _size))
 		return "#error invalid proto\n";
-	return functionToString(message);
+	return programToString(message);
 }

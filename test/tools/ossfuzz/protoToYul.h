@@ -35,14 +35,20 @@ class ProtoConverter
 public:
 	ProtoConverter()
 	{
-		// The hard-coded function template foo has 10 parameters that are already "live"
-		m_numLiveVars = 10;
+		// Tracks the number of live variables in function scope
+		m_numLiveVars = 0;
+		// Tracks the number of live variables in inner scope of a function
 		m_numVarsPerScope.push(m_numLiveVars);
+		// Tracks the number of nested for loops for loop index referencing
 		m_numNestedForLoops = 0;
+		// Tracks the number of functions in program
+		m_numFunctions = 0;
+		// Tracks the number of globals in program
+		m_numGlobals = 0;
 	}
 	ProtoConverter(ProtoConverter const&) = delete;
 	ProtoConverter(ProtoConverter&&) = delete;
-	std::string functionToString(Function const& _input);
+	std::string programToString(Program const& _input);
 	std::string protoToYul(uint8_t const* _data, size_t _size);
 
 private:
@@ -62,6 +68,7 @@ private:
 	void visit(ForStmt const&);
 	void visit(CaseStmt const&);
 	void visit(SwitchStmt const&);
+	void visit(Program const&);
 	template <class T>
 	void visit(google::protobuf::RepeatedPtrField<T> const& _repeated_field);
 
@@ -72,6 +79,10 @@ private:
 	std::stack<uint8_t> m_numVarsPerScope;
 	int32_t m_numLiveVars;
 	int32_t m_numNestedForLoops;
+	int32_t m_numFunctions;
+	int32_t m_numGlobals;
+	static size_t constexpr maxInputParams = 4;
+	static size_t constexpr maxOutputParams = 4;
 };
 }
 }
