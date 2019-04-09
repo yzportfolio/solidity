@@ -43,8 +43,6 @@ public:
 		m_numNestedForLoops = 0;
 		// Tracks the number of functions in program
 		m_numFunctions = 0;
-		// Tracks the number of globals in program
-		m_numGlobals = 0;
 	}
 	ProtoConverter(ProtoConverter const&) = delete;
 	ProtoConverter(ProtoConverter&&) = delete;
@@ -80,9 +78,8 @@ private:
 	int32_t m_numLiveVars;
 	int32_t m_numNestedForLoops;
 	int32_t m_numFunctions;
-	int32_t m_numGlobals;
-	static size_t constexpr maxInputParams = 4;
-	static size_t constexpr maxOutputParams = 4;
+	static int constexpr maxInputParams = 4;
+	static int constexpr maxOutputParams = 4;
 };
 }
 }

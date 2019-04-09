@@ -173,8 +173,8 @@ message Block {
 
 message Function {
   required Block statements  = 1;
-  required uint32 inparams   = 2;
-  repeated uint32 outparams  = 3;
+  required int32 inparams   = 2;
+  required int32 outparams  = 3;
 }
 
 message Program {

@@ -389,46 +389,42 @@ void ProtoConverter::visit(Block const& _x)
 
 void ProtoConverter::visit(Function const& _x)
 {
-	int numInParams = _x.inparams % maxInputParams;
-	int numOutParams = _x.outparams % maxOutputParams;
-	int numTotalParams = numInParams + numOutParams;
-
-	if (numOutParams == 0)
-		return;
+	int numInParams = static_cast<uint32_t>(_x.inparams()) % maxInputParams + 1;
+	int numOutParams = static_cast<uint32_t>(_x.outparams()) % maxOutputParams + 1;
 
 	// Signature
-	m_output << "function foo_" << std::string(m_numFunctions);
+	m_output << "function foo_" << m_numFunctions;
 	m_output << "(";
 	m_numVarsPerScope.push(0);
 
-	for ( ; m_numVarsPerScope.top() < numInParams; m_numVarsPerScope.top()++)
+	for (int i = 0; i < numInParams; i++)
 	{
 		m_output << "x_" << std::to_string(m_numLiveVars++);
-		if (m_numVarsPerScope.top() < numInParams - 1)
+		m_numVarsPerScope.top()++;
+		if (i < numInParams - 1)
 			m_output << ", ";
 	}
 	m_output << ")";
 	m_output << " -> ";
-	for ( ; m_numVarsPerScope.top() < numTotalParams; m_numVarsPerScope.top()++)
+	for (int i = 0; i < numOutParams; i++)
 	{
 		m_output << "x_" << std::to_string(m_numLiveVars++);
-		if (m_numVarsPerScope.top() < numTotalParams - 1)
+		m_numVarsPerScope.top()++;
+		if (i < numOutParams - 1)
 			m_output << ", ";
 		else
 			m_output << "\n";
 	}
-	m_numVarsPerScope.top()--;
 	// Body
 	visit(_x.statements());
 	m_numLiveVars -= m_numVarsPerScope.top();
 	m_numVarsPerScope.pop();
 	assert(m_numLiveVars == 0);
 
-	m_output << "let ";
 	for (int i = 0; i < numOutParams; i++)
 	{
-		m_output << "a_" << std::to_string(m_numGlobals++);
-		if (m_numGlobals < numOutParams - 1)
+		m_output << "a_" << i;
+		if (i < numOutParams - 1)
 			m_output << ",";
 		else
 			m_output << " := ";
@@ -436,10 +432,10 @@ void ProtoConverter::visit(Function const& _x)
 
 	m_output << "foo_" << std::to_string(m_numFunctions++);
 	m_output << "(";
-	for (int i = 0; i < numOutParams; i++)
+	for (int i = 0; i < numInParams; i++)
 	{
 		m_output << "calldataload(" << std::to_string(i*32) << ")";
-		if (i < numOutParams - 1)
+		if (i < numInParams - 1)
 			m_output << ",";
 		else
 			m_output << ")\n";
@@ -454,6 +450,15 @@ void ProtoConverter::visit(Function const& _x)
 void ProtoConverter::visit(Program const& _x)
 {
 	m_output << "{\n";
+	m_output << "let ";
+	for (int i = 0; i < maxOutputParams; i++)
+	{
+		m_output << "a_" << i;
+		if (i < maxOutputParams - 1)
+			m_output << ", ";
+		else
+			m_output << "\n";
+	}
 	if (_x.funcs_size() > 0)
 		for (auto const& f: _x.funcs())
 			visit(f);
@@ -468,7 +473,7 @@ string ProtoConverter::programToString(Program const& _input)
 
 string ProtoConverter::protoToYul(const uint8_t* _data, size_t _size)
 {
-	Function message;
+	Program message;
 	if (!message.ParsePartialFromArray(_data, _size))
 		return "#error invalid proto\n";
 	return programToString(message);

@@ -30,7 +30,7 @@ using namespace yul;
 using namespace yul::test::yul_fuzzer;
 using namespace std;
 
-DEFINE_PROTO_FUZZER(Function const& _input)
+DEFINE_PROTO_FUZZER(Program const& _input)
 {
 	ProtoConverter converter;
 	string yul_source = converter.programToString(_input);
