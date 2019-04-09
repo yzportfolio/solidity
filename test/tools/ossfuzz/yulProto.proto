@@ -21,6 +21,11 @@ message VarDecl {
   required Expression expr = 1;
 }
 
+message MultiVarDecl {
+  required int32 func_id = 1;
+  required sfixed32 in_params = 2;
+}
+
 message TypedVarDecl {
   enum TypeName {
     BOOL = 1;
@@ -135,6 +140,12 @@ message AssignmentStatement {
   required Expression expr = 2;
 }
 
+message MultiVarAssignmentStatement {
+  required int32 func_id = 1;
+  required sfixed32 in_params = 2;
+  required sfixed32 out_params = 3;
+}
+
 message IfStmt {
   required Expression cond = 1;
   required Block if_body = 2;
@@ -164,6 +175,8 @@ message Statement {
     Block               blockstmt     = 5;
     ForStmt             forstmt       = 6;
     SwitchStmt          switchstmt    = 7;
+    MultiVarDecl        multivardecl  = 8;
+    MultiVarAssignmentStatement multivarassign = 9;
   }
 }
 

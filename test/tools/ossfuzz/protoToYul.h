@@ -21,6 +21,8 @@
 #include <ostream>
 #include <sstream>
 #include <stack>
+#include <vector>
+#include <tuple>
 
 #include <test/tools/ossfuzz/yulProto.pb.h>
 
@@ -56,9 +58,11 @@ private:
 	void visit(VarRef const&);
 	void visit(Expression const&);
 	void visit(VarDecl const&);
+	void visit(MultiVarDecl const&);
 	void visit(TypedVarDecl const&);
 	void visit(UnaryOp const&);
 	void visit(AssignmentStatement const&);
+	void visit(MultiVarAssignmentStatement const&);
 	void visit(IfStmt const&);
 	void visit(StoreFunc const&);
 	void visit(Statement const&);
@@ -69,6 +73,7 @@ private:
 	void visit(Program const&);
 	template <class T>
 	void visit(google::protobuf::RepeatedPtrField<T> const& _repeated_field);
+	void registerFunction(Function const&);
 
 	std::string createHex(std::string const& _hexBytes) const;
 	std::string createAlphaNum(std::string const& _strBytes) const;
@@ -78,6 +83,7 @@ private:
 	int32_t m_numLiveVars;
 	int32_t m_numNestedForLoops;
 	int32_t m_numFunctions;
+	std::vector<std::pair<int,int>> m_functionVec;
 	static int constexpr maxInputParams = 4;
 	static int constexpr maxOutputParams = 4;
 };

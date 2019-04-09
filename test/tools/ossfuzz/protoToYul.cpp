@@ -186,6 +186,42 @@ void ProtoConverter::visit(VarDecl const& _x)
 	m_output << "\n";
 }
 
+void ProtoConverter::visit(MultiVarDecl const& _x)
+{
+	size_t funcId = (static_cast<size_t>(_x.func_id()) % m_functionVec.size());
+	int32_t in_params = _x.in_params();
+	assert(maxInputParams == 4);
+	uint8_t bytes[4];
+	bytes[0] = (in_params >> 24) & 0xFF;
+	bytes[1] = (in_params >> 16) & 0xFF;
+	bytes[2] = (in_params >> 8) & 0xFF;
+	bytes[3] = in_params & 0xFF;
+
+	int numInParams = m_functionVec.at(funcId).first;
+	int numOutParams = m_functionVec.at(funcId).second;
+	m_output << "let ";
+	int32_t tmp = m_numLiveVars;
+	for (int i = 0; i < numOutParams; i++)
+	{
+		m_output << "x_" << tmp++;
+		if (i < numOutParams - 1)
+			m_output << ", ";
+		else
+			m_output << " := ";
+	}
+	m_output << "foo_" << funcId;
+	m_output << "(";
+	for (int i = 0; i < numInParams; i++)
+	{
+		m_output  << "x_" << (static_cast<uint32_t>(bytes[i]) % m_numLiveVars);
+		if (i < numInParams - 1)
+			m_output << ", ";
+	}
+	m_output << ")\n";
+	m_numVarsPerScope.top() += (tmp - m_numLiveVars);
+	m_numLiveVars = tmp;
+}
+
 void ProtoConverter::visit(TypedVarDecl const& _x)
 {
 	m_output << "let x_" << m_numLiveVars;
@@ -281,6 +317,46 @@ void ProtoConverter::visit(AssignmentStatement const& _x)
 	m_output << "\n";
 }
 
+void ProtoConverter::visit(MultiVarAssignmentStatement const& _x)
+{
+	size_t funcId = (static_cast<size_t>(_x.func_id()) % m_functionVec.size());
+	int32_t in_params = _x.in_params();
+	int32_t out_params = _x.out_params();
+	assert(maxInputParams == 4);
+	assert(maxInputParams == maxOutputParams);
+	uint8_t inBytes[4];
+	uint8_t outBytes[4];
+	inBytes[0] = (in_params >> 24) & 0xFF;
+	inBytes[1] = (in_params >> 16) & 0xFF;
+	inBytes[2] = (in_params >> 8) & 0xFF;
+	inBytes[3] = in_params & 0xFF;
+	outBytes[0] = (out_params >> 24) & 0xFF;
+	outBytes[1] = (out_params >> 16) & 0xFF;
+	outBytes[2] = (out_params >> 8) & 0xFF;
+	outBytes[3] = out_params & 0xFF;
+
+	int numInParams = m_functionVec.at(funcId).first;
+	int numOutParams = m_functionVec.at(funcId).second;
+
+	for (int i = 0; i < numOutParams; i++)
+	{
+		m_output  << "x_" << (static_cast<uint32_t>(outBytes[i]) % m_numLiveVars);
+		if (i < numOutParams - 1)
+			m_output << ", ";
+		else
+			m_output << " := ";
+	}
+	m_output << "foo_" << funcId;
+	m_output << "(";
+	for (int i = 0; i < numInParams; i++)
+	{
+		m_output  << "x_" << (static_cast<uint32_t>(inBytes[i]) % m_numLiveVars);
+		if (i < numInParams - 1)
+			m_output << ", ";
+	}
+	m_output << ")\n";
+}
+
 void ProtoConverter::visit(IfStmt const& _x)
 {
 	m_output << "if ";
@@ -365,6 +441,12 @@ void ProtoConverter::visit(Statement const& _x)
 			break;
 		case Statement::kSwitchstmt:
 			visit(_x.switchstmt());
+			break;
+		case Statement::kMultivardecl:
+			visit(_x.multivardecl());
+			break;
+		case Statement::kMultivarassign:
+			visit(_x.multivarassign());
 			break;
 		case Statement::STMT_ONEOF_NOT_SET:
 			break;
@@ -460,8 +542,14 @@ void ProtoConverter::visit(Program const& _x)
 			m_output << "\n";
 	}
 	if (_x.funcs_size() > 0)
+	{
+		// Register functions
+		for (auto const& f: _x.funcs())
+			registerFunction(f);
+
 		for (auto const& f: _x.funcs())
 			visit(f);
+	}
 	m_output << "}\n";
 }
 
@@ -477,4 +565,11 @@ string ProtoConverter::protoToYul(const uint8_t* _data, size_t _size)
 	if (!message.ParsePartialFromArray(_data, _size))
 		return "#error invalid proto\n";
 	return programToString(message);
+}
+
+void ProtoConverter::registerFunction(Function const& _x)
+{
+	int numInParams = static_cast<uint32_t>(_x.inparams()) % maxInputParams + 1;
+	int numOutParams = static_cast<uint32_t>(_x.outparams()) % maxOutputParams + 1;
+	m_functionVec.push_back(std::make_pair(numInParams, numOutParams));
 }
