@@ -17,6 +17,7 @@ Compiler Features:
  * SMTChecker: Support mod.
  * Optimizer: Add rule for shifts by constants larger than 255 for Constantinople.
  * Optimizer: Add rule to simplify certain ANDs and SHL combinations
+ * Optimizer: Add rule to simplify SHL/SHR combinations.
  * Yul: Adds break and continue keywords to for-loop syntax.
  * Yul Optimizer: Adds steps for detecting and removing of dead code.
 
