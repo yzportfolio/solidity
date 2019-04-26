@@ -39,12 +39,22 @@ string::const_iterator skipLineOrEOS(
 	return (_nlPos == _end) ? _end : ++_nlPos;
 }
 
-string::const_iterator firstSpaceOrTab(
+string::const_iterator firstNonIdentifier(
 	string::const_iterator _pos,
 	string::const_iterator _end
 )
 {
-	return boost::range::find_first_of(make_pair(_pos, _end), " \t");
+	// Identifier start
+	auto currPos = _pos;
+	if (currPos != _end && (*currPos == '_' || isalpha(*currPos)))
+		currPos++;
+	else
+		return currPos;
+
+	// Identifer part
+	while (currPos != _end && (*currPos == '_' || isalnum(*currPos)))
+		currPos++;
+	return currPos;
 }
 
 string::const_iterator firstWhitespaceOrNewline(
@@ -135,7 +145,7 @@ DocStringParser::iter DocStringParser::parseDocTagParam(iter _pos, iter _end)
 		appendError("No param name given");
 		return _end;
 	}
-	auto nameEndPos = firstSpaceOrTab(nameStartPos, _end);
+	auto nameEndPos = firstNonIdentifier(nameStartPos, _end);
 	auto paramName = string(nameStartPos, nameEndPos);
 
 	auto descStartPos = skipWhitespace(nameEndPos, _end);
