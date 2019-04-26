@@ -397,7 +397,8 @@ bool CompilerStack::isRequestedContract(ContractDefinition const& _contract) con
 	return
 		m_requestedContractNames.empty() ||
 		m_requestedContractNames.count(_contract.fullyQualifiedName()) ||
-		m_requestedContractNames.count(_contract.name());
+		m_requestedContractNames.count(_contract.name()) ||
+		m_requestedContractNames.count(":" + _contract.name());
 }
 
 bool CompilerStack::compile()
