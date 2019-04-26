@@ -32,7 +32,7 @@ Storage Example
     }
 
 The first line tells you that the source code is written for
-Solidity version 0.4.0, or a newer version of the language that does not break functionality, up to, but not including, version 0.7.0.
+Solidity version 0.4.0, or a newer version of the language up to, but not including version 0.7.0.
 This is to ensure that the contract is not compilable with a new (breaking) compiler version, where it could behave differently.
 :ref:`Pragmas<pragma>` are common instructions for compilers about how to treat the
 source code (e.g. `pragma once <https://en.wikipedia.org/wiki/Pragma_once>`_).
