@@ -305,8 +305,21 @@ SOLTMPDIR=$(mktemp -d)
     REPO_ROOT=$(pwd) # make it absolute
     cd "$SOLTMPDIR"
     "$REPO_ROOT"/scripts/isolate_tests.py "$REPO_ROOT"/docs/ docs
-    # Copy config needed for solhint
-    cp "$REPO_ROOT"/test/.solhint.json "$SOLTMPDIR"/.solhint.json
+
+    if node -v >/dev/null
+    then
+        if npm list -g | grep solhint >/dev/null
+        then
+            echo "node is installed, setting up solhint"
+            cp "$REPO_ROOT"/test/.solhint.json "$SOLTMPDIR"/.solhint.json
+        else
+            echo "node is installed, installing solhint"
+            npm install -g solhint
+            cp "$REPO_ROOT"/test/.solhint.json "$SOLTMPDIR"/.solhint.json
+        fi
+    else
+        echo "node not installed, skipping docs style checker"
+    fi
 
     for f in *.sol
     do
@@ -318,8 +331,11 @@ SOLTMPDIR=$(mktemp -d)
         fi
         echo "$f"
 
-        # Only report errors
-        solhint -q -f unix "$SOLTMPDIR/$f"
+        if npm list -g | grep solhint >/dev/null
+        then
+            # Only report errors
+            solhint -q -f unix "$SOLTMPDIR/$f"
+        fi
 
         opts=''
         # We expect errors if explicitly stated, or if imports
