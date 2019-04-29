@@ -160,7 +160,7 @@ function force_solc_settings
 function force_abi_v2
 {
     # Add "pragma experimental ABIEncoderV2" to all files.
-    printLog "Forcibly enabling ABIEncodreV2..."
+    printLog "Forcibly enabling ABIEncoderV2..."
     find contracts test -name '*.sol' -type f -print0 | \
     while IFS= read -r -d '' file
     do
@@ -213,12 +213,13 @@ function run_test
         declare -a optimizer_settings=("{ enabled: true, details: { yul: true } }")
     fi
 
+    # Force ABIEncoderV2 for all optimization levels once.
+    force_abi_v2
+
     for optimize in "${optimizer_settings[@]}"
     do
         clean
         force_solc_settings "$CONFIG" "$optimize" "petersburg"
-        # Force ABIEncoderV2 in the last step. Has to be the last because code is modified.
-        [[ "$optimize" =~ yul ]] && force_abi_v2
 
         printLog "Running compile function..."
         $compile_fn
