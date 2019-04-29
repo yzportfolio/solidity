@@ -272,7 +272,7 @@ jobs:
 
   test_x86_linux:
     docker:
-      - image: circleci/node
+      - image: buildpack-deps:bionic
     environment:
       TERM: xterm
     steps:
