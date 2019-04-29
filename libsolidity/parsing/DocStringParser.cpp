@@ -17,6 +17,7 @@
 
 #include <libsolidity/parsing/DocStringParser.h>
 
+#include <liblangutil/Common.h>
 #include <liblangutil/ErrorReporter.h>
 #include <liblangutil/Exceptions.h>
 
@@ -44,16 +45,13 @@ string::const_iterator firstNonIdentifier(
 	string::const_iterator _end
 )
 {
-	// Identifier start
 	auto currPos = _pos;
-	if (currPos != _end && (*currPos == '_' || isalpha(*currPos)))
+	if (currPos == _pos && isIdentifierStart(*currPos))
+	{
 		currPos++;
-	else
-		return currPos;
-
-	// Identifer part
-	while (currPos != _end && (*currPos == '_' || isalnum(*currPos)))
-		currPos++;
+		while (currPos != _end && isIdentifierPart(*currPos))
+			currPos++;
+	}
 	return currPos;
 }
 
