@@ -120,9 +120,10 @@ bytes compileFirstExpression(
 
 	ErrorList errors;
 	ErrorReporter errorReporter(errors);
+	GlobalContext globalContext;
 	map<ASTNode const*, shared_ptr<DeclarationContainer>> scopes;
 	NameAndTypeResolver resolver(declarations, scopes, errorReporter);
-	resolver.registerDeclarations(*sourceUnit);
+	resolver.registerDeclarations(*sourceUnit, globalContext);
 
 	vector<ContractDefinition const*> inheritanceHierarchy;
 	for (ASTPointer<ASTNode> const& node: sourceUnit->nodes())

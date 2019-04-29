@@ -52,12 +52,12 @@ NameAndTypeResolver::NameAndTypeResolver(
 	}
 }
 
-bool NameAndTypeResolver::registerDeclarations(SourceUnit& _sourceUnit, ASTNode const* _currentScope)
+bool NameAndTypeResolver::registerDeclarations(SourceUnit& _sourceUnit, GlobalContext& _globalContext, ASTNode const* _currentScope)
 {
 	// The helper registers all declarations in m_scopes as a side-effect of its construction.
 	try
 	{
-		DeclarationRegistrationHelper registrar(m_scopes, _sourceUnit, m_errorReporter, _currentScope);
+		DeclarationRegistrationHelper registrar(m_scopes, _sourceUnit, m_errorReporter, _globalContext, _currentScope);
 	}
 	catch (langutil::FatalError const&)
 	{
@@ -452,11 +452,13 @@ DeclarationRegistrationHelper::DeclarationRegistrationHelper(
 	map<ASTNode const*, shared_ptr<DeclarationContainer>>& _scopes,
 	ASTNode& _astRoot,
 	ErrorReporter& _errorReporter,
+	GlobalContext& _globalContext,
 	ASTNode const* _currentScope
 ):
 	m_scopes(_scopes),
 	m_currentScope(_currentScope),
-	m_errorReporter(_errorReporter)
+	m_errorReporter(_errorReporter),
+	m_globalContext(_globalContext)
 {
 	_astRoot.accept(*this);
 	solAssert(m_currentScope == _currentScope, "Scopes not correctly closed.");
@@ -560,6 +562,10 @@ bool DeclarationRegistrationHelper::visit(ImportDirective& _import)
 
 bool DeclarationRegistrationHelper::visit(ContractDefinition& _contract)
 {
+	m_globalContext.setCurrentContract(_contract);
+	m_scopes[nullptr]->registerDeclaration(*m_globalContext.currentThis(), nullptr, false, true);
+	m_scopes[nullptr]->registerDeclaration(*m_globalContext.currentSuper(), nullptr, false, true);
+
 	registerDeclaration(_contract, true);
 	_contract.annotation().canonicalName = currentCanonicalName();
 	return true;

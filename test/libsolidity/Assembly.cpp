@@ -63,9 +63,10 @@ eth::AssemblyItems compileContract(std::shared_ptr<CharStream> _sourceCode)
 	BOOST_CHECK(!!sourceUnit);
 
 	map<ASTNode const*, shared_ptr<DeclarationContainer>> scopes;
+	GlobalContext globalContext;
 	NameAndTypeResolver resolver({}, scopes, errorReporter);
 	solAssert(Error::containsOnlyWarnings(errorReporter.errors()), "");
-	resolver.registerDeclarations(*sourceUnit);
+	resolver.registerDeclarations(*sourceUnit, globalContext);
 	for (ASTPointer<ASTNode> const& node: sourceUnit->nodes())
 		if (ContractDefinition* contract = dynamic_cast<ContractDefinition*>(node.get()))
 		{

@@ -23,6 +23,7 @@
 #pragma once
 
 #include <libsolidity/analysis/DeclarationContainer.h>
+#include <libsolidity/analysis/GlobalContext.h>
 #include <libsolidity/analysis/ReferencesResolver.h>
 #include <libsolidity/ast/ASTAnnotations.h>
 #include <libsolidity/ast/ASTVisitor.h>
@@ -61,7 +62,7 @@ public:
 	/// @returns false in case of error.
 	/// @param _currentScope should be nullptr but can be used to inject new declarations into
 	/// existing scopes, used by the snippets feature.
-	bool registerDeclarations(SourceUnit& _sourceUnit, ASTNode const* _currentScope = nullptr);
+	bool registerDeclarations(SourceUnit& _sourceUnit, GlobalContext& _globalContext, ASTNode const* _currentScope = nullptr);
 	/// Applies the effect of import directives.
 	bool performImports(SourceUnit& _sourceUnit, std::map<std::string, SourceUnit const*> const& _sourceUnits);
 	/// Resolves all names and types referenced from the given AST Node.
@@ -148,6 +149,7 @@ public:
 		std::map<ASTNode const*, std::shared_ptr<DeclarationContainer>>& _scopes,
 		ASTNode& _astRoot,
 		langutil::ErrorReporter& _errorReporter,
+		GlobalContext& _globalContext,
 		ASTNode const* _currentScope = nullptr
 	);
 
@@ -200,6 +202,7 @@ private:
 	ASTNode const* m_currentScope = nullptr;
 	VariableScope* m_currentFunction = nullptr;
 	langutil::ErrorReporter& m_errorReporter;
+	GlobalContext& m_globalContext;
 };
 
 }
